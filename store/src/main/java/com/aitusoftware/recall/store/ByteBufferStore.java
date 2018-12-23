@@ -107,7 +107,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
         for (int i = writePositions.length - 1; i >= writePositions.length - replacementCount; i--)
         {
             final long writePosition = writePositions[i];
-            final long freePosition = deletedEntryPositions[ptr++];
+            final long freePosition = deletedEntryPositions[ptr];
             final long id = writePositionToIdMap.get(writePosition);
             if (freePosition < writePosition)
             {
@@ -118,7 +118,15 @@ public final class ByteBufferStore implements Store<ByteBuffer>
                 index.put(id, freePosition);
                 removed.remove(id);
                 nextWriteOffset = (int) writePosition;
+                ptr++;
             }
+        }
+
+        while (ptr < deletedEntryPositions.length &&
+                deletedEntryPositions[ptr] == nextWriteOffset - internalRecordLength)
+        {
+            nextWriteOffset -= internalRecordLength;
+            ptr++;
         }
     }
 

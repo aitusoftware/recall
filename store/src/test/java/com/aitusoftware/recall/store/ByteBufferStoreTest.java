@@ -3,7 +3,6 @@ package com.aitusoftware.recall.store;
 
 import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -112,7 +111,7 @@ class ByteBufferStoreTest
 
         store.compact();
 
-        for (int i = 0; i < (MAX_RECORDS / 2) - 1; i++)
+        for (int i = 0; i < (MAX_RECORDS / 2); i++)
         {
             final Order order = Order.of(i + MAX_RECORDS);
             store.store(transcoder, order, order);
@@ -124,13 +123,12 @@ class ByteBufferStoreTest
         {
             assertThat(store.load(i, transcoder, container)).named("Did not find element %d", i).isTrue();
         }
-        for (int i = 0; i < (MAX_RECORDS / 2) - 1; i++)
+        for (int i = 0; i < (MAX_RECORDS / 2); i++)
         {
             assertThat(store.load(i + MAX_RECORDS, transcoder, container)).isTrue();
         }
     }
 
-    @Disabled
     @Test
     void shouldPerformIdealCompaction()
     {
