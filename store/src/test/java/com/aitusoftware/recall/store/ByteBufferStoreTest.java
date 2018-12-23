@@ -17,10 +17,10 @@ class ByteBufferStoreTest
     void shouldStoreAndLoad()
     {
         final Order order = Order.of(ID);
-        store.store(null, transcoder, order, order);
+        store.store(transcoder, order, order);
 
         final Order container = Order.of(-1L);
-        assertThat(store.load(ID, null, transcoder, container)).isTrue();
+        assertThat(store.load(ID, transcoder, container)).isTrue();
 
         assertEquality(order, container);
     }
@@ -29,12 +29,12 @@ class ByteBufferStoreTest
     void shouldDelete()
     {
         final Order order = Order.of(ID);
-        store.store(null, transcoder, order, order);
+        store.store(transcoder, order, order);
 
         assertThat(store.remove(ID)).isTrue();
 
         final Order container = Order.of(-1L);
-        assertThat(store.load(ID, null, transcoder, container)).isFalse();
+        assertThat(store.load(ID, transcoder, container)).isFalse();
     }
 
     @Test
@@ -47,17 +47,17 @@ class ByteBufferStoreTest
     void shouldUpdateInPlace()
     {
         final Order order = Order.of(ID);
-        store.store(null, transcoder, order, order);
+        store.store(transcoder, order, order);
         final int nextWriteOffset = store.getNextWriteOffset();
 
         final Order updated = new Order(ID, 17L, 37,
                 13L, 17L, 35, "Foo");
-        store.store(null, transcoder, updated, updated);
+        store.store(transcoder, updated, updated);
 
         assertThat(store.getNextWriteOffset()).isEqualTo(nextWriteOffset);
 
         final Order container = Order.of(-1L);
-        assertThat(store.load(ID, null, transcoder, container)).isTrue();
+        assertThat(store.load(ID, transcoder, container)).isTrue();
 
         assertEquality(container, updated);
     }
@@ -66,14 +66,14 @@ class ByteBufferStoreTest
     void shouldStoreAfterRemoval()
     {
         final Order order = Order.of(ID);
-        store.store(null, transcoder, order, order);
+        store.store(transcoder, order, order);
 
         store.remove(ID);
 
-        store.store(null, transcoder, order, order);
+        store.store(transcoder, order, order);
 
         final Order container = Order.of(-1L);
-        assertThat(store.load(ID, null, transcoder, container)).isTrue();
+        assertThat(store.load(ID, transcoder, container)).isTrue();
 
         assertEquality(container, order);
     }

@@ -24,7 +24,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
     }
 
     @Override
-    public <T> boolean load(final long id, final ByteBuffer buffer,
+    public <T> boolean load(final long id,
                             final Transcoder<ByteBuffer, T> transcoder, final T container)
     {
         final long recordOffset = index.get(id);
@@ -41,7 +41,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
     }
 
     @Override
-    public <T> void store(final ByteBuffer buffer, final Transcoder<ByteBuffer, T> transcoder,
+    public <T> void store(final Transcoder<ByteBuffer, T> transcoder,
                           final T value, final IdAccessor<T> idAccessor)
     {
         final long valueId = idAccessor.getId(value);
