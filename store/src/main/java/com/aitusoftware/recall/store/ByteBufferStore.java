@@ -4,6 +4,7 @@ import com.aitusoftware.recall.persistence.IdAccessor;
 import com.aitusoftware.recall.persistence.Transcoder;
 import org.agrona.collections.Long2LongHashMap;
 
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 public final class ByteBufferStore implements Store<ByteBuffer>
@@ -43,10 +44,42 @@ public final class ByteBufferStore implements Store<ByteBuffer>
     public <T> void store(final ByteBuffer buffer, final Transcoder<ByteBuffer, T> transcoder,
                           final T value, final IdAccessor<T> idAccessor)
     {
-        index.put(idAccessor.getId(value), nextWriteOffset);
-        this.buffer.limit(nextWriteOffset + internalRecordLength).position(nextWriteOffset);
-        this.buffer.putLong(idAccessor.getId(value));
+        final long valueId = idAccessor.getId(value);
+        final long existingPosition = index.get(valueId);
+        if (existingPosition != NOT_IN_MAP)
+        {
+            this.buffer.limit((int) existingPosition + internalRecordLength).position((int) existingPosition + Long.BYTES);
+        }
+        else
+        {
+            index.put(valueId, nextWriteOffset);
+            this.buffer.limit(nextWriteOffset + internalRecordLength).position(nextWriteOffset);
+            this.buffer.putLong(valueId);
+            nextWriteOffset += internalRecordLength;
+        }
         transcoder.store(this.buffer, value);
-        nextWriteOffset += internalRecordLength;
+    }
+
+    @Override
+    public boolean remove(final long id)
+    {
+        return index.remove(id) != NOT_IN_MAP;
+    }
+
+    @Override
+    public void sync()
+    {
+
+    }
+
+    @Override
+    public void streamTo(final OutputStream output)
+    {
+
+    }
+
+    int getNextWriteOffset()
+    {
+        return nextWriteOffset;
     }
 }
