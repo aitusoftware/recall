@@ -15,9 +15,12 @@ public final class ByteBufferStore implements Store<ByteBuffer>
     private final ByteBuffer readSlice;
     private final Long2LongHashMap index = new Long2LongHashMap(NOT_IN_MAP);
     private final Long2LongHashMap removed = new Long2LongHashMap(NOT_IN_MAP);
+    private final long[] removedEntryBuffer;
+    private final long[] writePositionCache;
     private final int internalRecordLength;
     private final int bufferCapacity;
     private int nextWriteOffset;
+    private final Long2LongHashMap writePositionToIdMap = new Long2LongHashMap(NOT_IN_MAP);
 
     public ByteBufferStore(final int maxRecordLength, final int maxRecords)
     {
@@ -25,6 +28,8 @@ public final class ByteBufferStore implements Store<ByteBuffer>
         buffer = ByteBuffer.allocateDirect(internalRecordLength * maxRecords);
         readSlice = buffer.slice();
         bufferCapacity = buffer.capacity();
+        removedEntryBuffer = new long[maxRecords];
+        writePositionCache = new long[maxRecords];
     }
 
     @Override
@@ -83,31 +88,32 @@ public final class ByteBufferStore implements Store<ByteBuffer>
     @Override
     public void compact()
     {
-        final Long2LongHashMap writePositionToIdMap = new Long2LongHashMap(NOT_IN_MAP);
+        writePositionToIdMap.clear();
         final Long2LongHashMap.KeyIterator valueKeyIterator = index.keySet().iterator();
-        final long[] writePositions = new long[index.size()];
+        final int numberOfElements = index.size();
         int ptr = 0;
         while (valueKeyIterator.hasNext())
         {
             final long id = valueKeyIterator.nextValue();
             writePositionToIdMap.put(index.get(id), id);
-            writePositions[ptr++] = index.get(id);
+            writePositionCache[ptr++] = index.get(id);
         }
-        Arrays.sort(writePositions);
-        final long[] deletedEntryPositions = new long[removed.size()];
+        Arrays.sort(writePositionCache, 0, numberOfElements);
+
+        final int numberOfRemovedElements = removed.size();
         final Long2LongHashMap.KeyIterator removedKeyIterator = removed.keySet().iterator();
         ptr = 0;
         while (removedKeyIterator.hasNext())
         {
-            deletedEntryPositions[ptr++] = removed.get(removedKeyIterator.nextValue());
+            removedEntryBuffer[ptr++] = removed.get(removedKeyIterator.nextValue());
         }
-        Arrays.sort(deletedEntryPositions);
-        final int replacementCount = Math.min(writePositions.length, deletedEntryPositions.length);
+        Arrays.sort(removedEntryBuffer, 0, numberOfRemovedElements);
+        final int replacementCount = Math.min(numberOfElements, numberOfRemovedElements);
         ptr = 0;
-        for (int i = writePositions.length - 1; i >= writePositions.length - replacementCount; i--)
+        for (int i = numberOfElements - 1; i >= numberOfElements - replacementCount; i--)
         {
-            final long writePosition = writePositions[i];
-            final long freePosition = deletedEntryPositions[ptr];
+            final long writePosition = writePositionCache[i];
+            final long freePosition = removedEntryBuffer[ptr];
             final long id = writePositionToIdMap.get(writePosition);
             if (freePosition < writePosition)
             {
@@ -122,12 +128,15 @@ public final class ByteBufferStore implements Store<ByteBuffer>
             }
         }
 
-        while (ptr < deletedEntryPositions.length &&
-                deletedEntryPositions[ptr] == nextWriteOffset - internalRecordLength)
+        while (ptr < numberOfRemovedElements &&
+                removedEntryBuffer[ptr] == nextWriteOffset - internalRecordLength)
         {
             nextWriteOffset -= internalRecordLength;
             ptr++;
         }
+
+        index.compact();
+        removed.compact();
     }
 
     @Override
