@@ -3,7 +3,6 @@ package com.aitusoftware.recall.store;
 import com.aitusoftware.recall.persistence.Decoder;
 import com.aitusoftware.recall.persistence.Encoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
-import org.agrona.BitUtil;
 import org.agrona.collections.Long2LongHashMap;
 
 import java.io.OutputStream;
@@ -23,7 +22,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
 
     public ByteBufferStore(final int maxRecordLength, final int maxRecords)
     {
-        internalRecordLength = BitUtil.findNextPositivePowerOfTwo(maxRecordLength + Long.BYTES);
+        internalRecordLength = maxRecordLength + Long.BYTES;
         buffer = ByteBuffer.allocateDirect(internalRecordLength * maxRecords);
         readSlice = buffer.slice();
         bufferCapacity = buffer.capacity();

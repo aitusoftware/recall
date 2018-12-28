@@ -149,7 +149,7 @@ class ByteBufferStoreTest
 
         store.compact();
 
-        assertThat(store.nextWriteOffset()).isEqualTo(256);
+        assertThat(store.nextWriteOffset()).isEqualTo(144);
     }
 
     @Test
