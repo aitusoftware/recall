@@ -9,9 +9,9 @@ public final class AsciiCharSequence implements CharSequence
 
     public AsciiCharSequence(final String value)
     {
-        content = new char[value.length()];
-        System.arraycopy(value.toCharArray(), 0, content, 0, content.length);
-        length = content.length;
+        content = new char[value.length() * 4];
+        System.arraycopy(value.toCharArray(), 0, content, 0, value.length());
+        length = value.length();
     }
 
     public AsciiCharSequence(final int maxLength)

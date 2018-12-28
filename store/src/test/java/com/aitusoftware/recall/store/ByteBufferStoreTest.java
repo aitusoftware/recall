@@ -3,7 +3,10 @@ package com.aitusoftware.recall.store;
 
 import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
+import org.agrona.collections.LongHashSet;
 import org.junit.jupiter.api.Test;
+
+import java.util.Random;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -89,7 +92,8 @@ class ByteBufferStoreTest
             store.store(transcoder, order, order);
         }
 
-        assertThrows(CapacityExceededException.class, () -> {
+        assertThrows(CapacityExceededException.class, () ->
+        {
             final Order order = Order.of(MAX_RECORDS);
             store.store(transcoder, order, order);
         });
@@ -145,7 +149,70 @@ class ByteBufferStoreTest
 
         store.compact();
 
-        assertThat(store.nextWriteOffset()).isEqualTo(144);
+        assertThat(store.nextWriteOffset()).isEqualTo(256);
+    }
+
+    @Test
+    void correctnessTest()
+    {
+        final long randomSeed = System.nanoTime();
+        final Random random = new Random(randomSeed);
+        final int maxRecords = 50_000;
+        final ByteBufferStore store = new ByteBufferStore(128, maxRecords);
+        final LongHashSet createdIds = new LongHashSet();
+        final LongHashSet removedIds = new LongHashSet();
+
+        for (int i = 0; i < maxRecords; i++)
+        {
+            final long id = random.nextLong();
+            store.store(transcoder, Order.of(id), ByteBufferStoreTest::idOf);
+            createdIds.add(id);
+        }
+
+        final LongHashSet.LongIterator iterator = createdIds.iterator();
+        for (int i = 0; i < maxRecords / 10; i++)
+        {
+            final long idToRemove = iterator.nextValue();
+            createdIds.remove(idToRemove);
+            removedIds.add(idToRemove);
+            store.remove(idToRemove);
+            if (i % 100 == 0)
+            {
+                final long s0 = System.nanoTime();
+                store.compact();
+            }
+        }
+        try
+        {
+            assertContent(store, createdIds, removedIds);
+        }
+        catch (AssertionError e)
+        {
+            throw new AssertionError("Test failed with random seed " + randomSeed, e);
+        }
+    }
+
+    private void assertContent(final ByteBufferStore store, final LongHashSet createdIds,
+                               final LongHashSet removedIds)
+    {
+        final Order container = Order.of(99999L);
+
+        for (final long id : createdIds)
+        {
+            assertThat(store.load(id, transcoder, container)).isTrue();
+            assertThat(container.getId()).isEqualTo(id);
+            assertThat(container.getInstrumentId()).isEqualTo(37L);
+        }
+
+        for (final long id : removedIds)
+        {
+            assertThat(store.load(id, transcoder, container)).isFalse();
+        }
+    }
+
+    private static long idOf(final Order order)
+    {
+        return order.getId();
     }
 
     private static void assertEquality(final Order actual, final Order expected)
