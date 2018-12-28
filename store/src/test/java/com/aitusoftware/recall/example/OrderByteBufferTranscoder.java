@@ -1,11 +1,12 @@
 package com.aitusoftware.recall.example;
 
 import com.aitusoftware.recall.persistence.AsciiCharSequence;
-import com.aitusoftware.recall.persistence.ByteBufferTranscoder;
+import com.aitusoftware.recall.persistence.Decoder;
+import com.aitusoftware.recall.persistence.Encoder;
 
 import java.nio.ByteBuffer;
 
-public class OrderByteBufferTranscoder implements ByteBufferTranscoder<Order>
+public class OrderByteBufferTranscoder implements Encoder<ByteBuffer, Order>, Decoder<ByteBuffer, Order>
 {
     @Override
     public void load(final ByteBuffer buffer, final Order container)

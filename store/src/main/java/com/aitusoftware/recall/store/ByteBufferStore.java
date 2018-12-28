@@ -1,7 +1,8 @@
 package com.aitusoftware.recall.store;
 
+import com.aitusoftware.recall.persistence.Decoder;
+import com.aitusoftware.recall.persistence.Encoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
-import com.aitusoftware.recall.persistence.Transcoder;
 import org.agrona.BitUtil;
 import org.agrona.collections.Long2LongHashMap;
 
@@ -32,7 +33,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
 
     @Override
     public <T> boolean load(final long id,
-                            final Transcoder<ByteBuffer, T> transcoder, final T container)
+                            final Decoder<ByteBuffer, T> decoder, final T container)
     {
         final long recordOffset = index.get(id);
         if (recordOffset == NOT_IN_MAP)
@@ -42,13 +43,13 @@ public final class ByteBufferStore implements Store<ByteBuffer>
         readSlice.limit(((int) recordOffset) + internalRecordLength).position((int) recordOffset);
         final long storedId = readSlice.getLong();
         assert storedId == id : String.format("stored: %d, requested: %d, at %d", storedId, id, recordOffset);
-        transcoder.load(readSlice, container);
+        decoder.load(readSlice, container);
 
         return true;
     }
 
     @Override
-    public <T> void store(final Transcoder<ByteBuffer, T> transcoder,
+    public <T> void store(final Encoder<ByteBuffer, T> encoder,
                           final T value, final IdAccessor<T> idAccessor) throws CapacityExceededException
     {
         if (nextWriteOffset == bufferCapacity)
@@ -68,7 +69,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
             this.buffer.putLong(valueId);
             nextWriteOffset += internalRecordLength;
         }
-        transcoder.store(this.buffer, value);
+        encoder.store(this.buffer, value);
     }
 
     @Override
