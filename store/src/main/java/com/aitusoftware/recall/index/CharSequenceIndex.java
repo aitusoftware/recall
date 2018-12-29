@@ -70,11 +70,6 @@ public final class CharSequenceIndex
         }
     }
 
-    private boolean isIndexPositionForValue(final CharSequence value, final int index)
-    {
-        return dataBuffer.getInt(index * Integer.BYTES) == 0 || isExistingEntry(value, index);
-    }
-
     public void search(final CharSequence value, final LongConsumer idReceiver)
     {
         int index = entrySize * (hash.applyAsInt(value) & mask);
@@ -112,18 +107,6 @@ public final class CharSequenceIndex
         liveEntryCount++;
     }
 
-    private boolean isExistingEntry(final CharSequence value, final int index)
-    {
-        for (int i = 0; i < value.length(); i++)
-        {
-            if (dataBuffer.getInt((dataOffset(index) + i) * Integer.BYTES) != value.charAt(i))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private void rehash()
     {
         final ByteBuffer oldBuffer = dataBuffer;
@@ -156,6 +139,23 @@ public final class CharSequenceIndex
     private long readId(final int index, final ByteBuffer backingBuffer)
     {
         return backingBuffer.getLong((index + idOffset) * Integer.BYTES);
+    }
+
+    private boolean isIndexPositionForValue(final CharSequence value, final int index)
+    {
+        return dataBuffer.getInt(index * Integer.BYTES) == 0 || isExistingEntry(value, index);
+    }
+
+    private boolean isExistingEntry(final CharSequence value, final int index)
+    {
+        for (int i = 0; i < value.length(); i++)
+        {
+            if (dataBuffer.getInt((dataOffset(index) + i) * Integer.BYTES) != value.charAt(i))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static int defaultHash(final CharSequence value)
