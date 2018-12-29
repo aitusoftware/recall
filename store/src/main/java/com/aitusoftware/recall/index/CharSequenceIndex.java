@@ -41,7 +41,7 @@ public final class CharSequenceIndex
             rehash();
         }
         final int index = entrySize * (hash.applyAsInt(value) & mask);
-        if (data[index] == 0)
+        if (data[index] == 0 || isExistingEntry(value, index))
         {
             insertEntry(value, id, index);
         }
@@ -51,13 +51,13 @@ public final class CharSequenceIndex
             {
                 final int candidateIndex = (index + (i * entrySize));
                 // TODO remove modulo
-                if (data[candidateIndex % data.length] == 0)
+                if (data[candidateIndex % data.length] == 0 || isExistingEntry(value, candidateIndex))
                 {
                     insertEntry(value, id, candidateIndex % data.length);
                     return;
                 }
             }
-            rehash();
+
             insert(value, id);
         }
     }
@@ -78,7 +78,7 @@ public final class CharSequenceIndex
             }
             if (matches)
             {
-                idReceiver.accept(readId(index));
+                idReceiver.accept(readId(index, this.data));
                 return;
             }
             index += entrySize;
@@ -97,6 +97,18 @@ public final class CharSequenceIndex
         liveEntryCount++;
     }
 
+    private boolean isExistingEntry(final CharSequence value, final int index)
+    {
+        for (int i = 0; i < value.length(); i++)
+        {
+            if (data[dataOffset(index) + i] != value.charAt(i))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void rehash()
     {
         final char[] old = data;
@@ -105,13 +117,14 @@ public final class CharSequenceIndex
         totalEntryCount *= 2;
         mask = totalEntryCount - 1;
         entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
+        liveEntryCount = 0;
 
         for (int i = 0; i < oldEntryCount; i++)
         {
             final int index = i * entrySize;
             if (old[index] != 0)
             {
-                final long id = readId(index);
+                final long id = readId(index, old);
                 charBuffer.reset(old, dataOffset(index), old[lengthOffset(index)]);
                 insert(charBuffer, id);
             }
@@ -124,9 +137,9 @@ public final class CharSequenceIndex
         data[index + idOffset + 1] = (char) id;
     }
 
-    private long readId(final int index)
+    private long readId(final int index, final char[] backingStore)
     {
-        return (((long) data[index + idOffset]) << 32) | (int) data[index + idOffset + 1];
+        return (((long) backingStore[index + idOffset]) << 32) | (int) backingStore[index + idOffset + 1];
     }
 
     private static int defaultHash(final CharSequence value)

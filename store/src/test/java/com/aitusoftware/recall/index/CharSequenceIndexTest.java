@@ -1,6 +1,5 @@
 package com.aitusoftware.recall.index;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -50,29 +49,22 @@ class CharSequenceIndexTest
         assertSearchResult(poorIndex, otherTerm, otherId);
     }
 
-    @Disabled
     @Test
-    void shouldGrowAsRequired()
+    void shouldHaveCorrectIndexAfterResize()
     {
-        for (int i = 0; i < INITIAL_SIZE; i++)
+        final int doubleInitialSize = INITIAL_SIZE * 2;
+        for (int i = 0; i < doubleInitialSize; i++)
         {
             index.insert("searchTerm_" + i, i);
         }
 
-        final String termToCauseGrowth = "termToCauseGrowth";
-        final long otherId = 37L;
-        index.insert(termToCauseGrowth, otherId);
-
-        assertSearchResult(index, termToCauseGrowth, otherId);
-
-        for (int i = 0; i < INITIAL_SIZE; i++)
+        for (int i = 0; i < doubleInitialSize; i++)
         {
             receivedList.clear();
             assertSearchResult(index, "searchTerm_" + i, i);
         }
     }
 
-    @Disabled
     @Test
     void shouldReplaceExistingValue()
     {
@@ -83,10 +75,11 @@ class CharSequenceIndexTest
         assertSearchResult(index, SEARCH_TERM, otherId);
     }
 
-    private void assertSearchResult(final CharSequenceIndex poorIndex, final String searchTerm, final long retrievedId)
+    private void assertSearchResult(final CharSequenceIndex index, final String searchTerm, final long retrievedId)
     {
-        poorIndex.search(searchTerm, this::onReceivedId);
-        assertThat(receivedList).containsExactly(retrievedId);
+        index.search(searchTerm, this::onReceivedId);
+        assertThat(receivedList).named("Expected value %s for term %s", retrievedId, searchTerm)
+                .containsExactly(retrievedId);
     }
 
     private void onReceivedId(final long id)
