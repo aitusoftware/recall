@@ -2,6 +2,8 @@ package com.aitusoftware.recall.index;
 
 import org.agrona.BitUtil;
 
+import java.nio.ByteBuffer;
+import java.util.function.IntFunction;
 import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
 
@@ -10,13 +12,15 @@ public final class CharSequenceIndex
     private final ToIntFunction<CharSequence> hash;
     private final CharArrayCharSequence charBuffer = new CharArrayCharSequence();
     private final float loadFactor = 0.7f;
-    private char[] data;
+    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
+    private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
     private int entryCountToTriggerRehash;
     private int mask;
     private int entrySize;
     private int idOffset;
+    private int maxCandidateIndex;
 
     public CharSequenceIndex(final int maxKeyLength, final int initialSize)
     {
@@ -29,8 +33,9 @@ public final class CharSequenceIndex
         mask = totalEntryCount - 1;
         entrySize = (maxKeyLength + 3);
         idOffset = maxKeyLength + 1;
-        data = new char[totalEntryCount * entrySize];
+        dataBuffer = bufferFactory.apply(((maxKeyLength + 3) * Integer.BYTES) * totalEntryCount);
         entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
+        maxCandidateIndex = totalEntryCount * entrySize;
         this.hash = hash;
     }
 
@@ -41,7 +46,7 @@ public final class CharSequenceIndex
             rehash();
         }
         final int index = entrySize * (hash.applyAsInt(value) & mask);
-        if (data[index] == 0 || isExistingEntry(value, index))
+        if (isIndexPositionForValue(value, index))
         {
             insertEntry(value, id, index);
         }
@@ -49,11 +54,14 @@ public final class CharSequenceIndex
         {
             for (int i = 1; i < totalEntryCount; i++)
             {
-                final int candidateIndex = (index + (i * entrySize));
-                // TODO remove modulo
-                if (data[candidateIndex % data.length] == 0 || isExistingEntry(value, candidateIndex))
+                int candidateIndex = (index + (i * entrySize));
+                if (candidateIndex >= maxCandidateIndex)
                 {
-                    insertEntry(value, id, candidateIndex % data.length);
+                    candidateIndex -= maxCandidateIndex;
+                }
+                if (isIndexPositionForValue(value, candidateIndex))
+                {
+                    insertEntry(value, id, candidateIndex);
                     return;
                 }
             }
@@ -62,15 +70,20 @@ public final class CharSequenceIndex
         }
     }
 
+    private boolean isIndexPositionForValue(final CharSequence value, final int index)
+    {
+        return dataBuffer.getInt(index * Integer.BYTES) == 0 || isExistingEntry(value, index);
+    }
+
     public void search(final CharSequence value, final LongConsumer idReceiver)
     {
         int index = entrySize * (hash.applyAsInt(value) & mask);
-        while (data[index] != 0)
+        while (dataBuffer.getInt(index * Integer.BYTES) != 0)
         {
             boolean matches = true;
             for (int i = 0; i < value.length(); i++)
             {
-                if (data[dataOffset(index) + i] != value.charAt(i))
+                if (dataBuffer.getInt((dataOffset(index) + i) * Integer.BYTES) != value.charAt(i))
                 {
                     matches = false;
                     break;
@@ -78,7 +91,7 @@ public final class CharSequenceIndex
             }
             if (matches)
             {
-                idReceiver.accept(readId(index, this.data));
+                idReceiver.accept(readId(index, dataBuffer));
                 return;
             }
             index += entrySize;
@@ -87,12 +100,14 @@ public final class CharSequenceIndex
 
     private void insertEntry(final CharSequence value, final long id, final int index)
     {
-        data[index] = 1;
-        data[lengthOffset(index)] = (char) value.length();
+        final int byteOffset = index * Integer.BYTES;
+        dataBuffer.putInt(byteOffset, 1);
+        dataBuffer.putInt(lengthOffset(index) * Integer.BYTES, value.length());
         for (int i = 0; i < value.length(); i++)
         {
-            data[dataOffset(index) + i] = value.charAt(i);
+            dataBuffer.putInt(byteOffset + (2 * Integer.BYTES) + (i * Integer.BYTES), value.charAt(i));
         }
+
         writeId(id, index);
         liveEntryCount++;
     }
@@ -101,7 +116,7 @@ public final class CharSequenceIndex
     {
         for (int i = 0; i < value.length(); i++)
         {
-            if (data[dataOffset(index) + i] != value.charAt(i))
+            if (dataBuffer.getInt((dataOffset(index) + i) * Integer.BYTES) != value.charAt(i))
             {
                 return false;
             }
@@ -111,21 +126,23 @@ public final class CharSequenceIndex
 
     private void rehash()
     {
-        final char[] old = data;
+        final ByteBuffer oldBuffer = dataBuffer;
         final int oldEntryCount = totalEntryCount;
-        data = new char[old.length * 2];
+
+        dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
         totalEntryCount *= 2;
         mask = totalEntryCount - 1;
         entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
         liveEntryCount = 0;
+        maxCandidateIndex = totalEntryCount * entrySize;
 
         for (int i = 0; i < oldEntryCount; i++)
         {
             final int index = i * entrySize;
-            if (old[index] != 0)
+            if (oldBuffer.getInt(index * Integer.BYTES) != 0)
             {
-                final long id = readId(index, old);
-                charBuffer.reset(old, dataOffset(index), old[lengthOffset(index)]);
+                final long id = readId(index, oldBuffer);
+                charBuffer.reset(oldBuffer, dataOffset(index), oldBuffer.getInt(lengthOffset(index) * Integer.BYTES));
                 insert(charBuffer, id);
             }
         }
@@ -133,13 +150,12 @@ public final class CharSequenceIndex
 
     private void writeId(final long id, final int index)
     {
-        data[index + idOffset] = (char) (id >> 32);
-        data[index + idOffset + 1] = (char) id;
+        dataBuffer.putLong((index + idOffset) * Integer.BYTES, id);
     }
 
-    private long readId(final int index, final char[] backingStore)
+    private long readId(final int index, final ByteBuffer backingBuffer)
     {
-        return (((long) backingStore[index + idOffset]) << 32) | (int) backingStore[index + idOffset + 1];
+        return backingBuffer.getLong((index + idOffset) * Integer.BYTES);
     }
 
     private static int defaultHash(final CharSequence value)
@@ -165,13 +181,13 @@ public final class CharSequenceIndex
 
     private static final class CharArrayCharSequence implements CharSequence
     {
-        private char[] data;
+        private ByteBuffer dataBuffer;
         private int offset;
         private int length;
 
-        void reset(final char[] data, final int offset, final int length)
+        void reset(final ByteBuffer dataBuffer, final int offset, final int length)
         {
-            this.data = data;
+            this.dataBuffer = dataBuffer;
             this.offset = offset;
             this.length = length;
         }
@@ -185,7 +201,7 @@ public final class CharSequenceIndex
         @Override
         public char charAt(final int i)
         {
-            return data[offset + i];
+            return (char) dataBuffer.getInt((offset + i) * Integer.BYTES);
         }
 
         @Override
@@ -197,7 +213,7 @@ public final class CharSequenceIndex
         @Override
         public String toString()
         {
-            return new String(data, offset, length);
+            return CharArrayCharSequence.class.getSimpleName();
         }
     }
 }
