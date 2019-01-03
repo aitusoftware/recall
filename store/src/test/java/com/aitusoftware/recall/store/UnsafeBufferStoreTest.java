@@ -2,8 +2,9 @@ package com.aitusoftware.recall.store;
 
 
 import com.aitusoftware.recall.example.Order;
-import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
+import com.aitusoftware.recall.example.OrderUnsafeBufferTranscoder;
 import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -13,15 +14,15 @@ import java.util.function.IntFunction;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class ByteBufferStoreTest
+class UnsafeBufferStoreTest
 {
     private static final long ID = 17L;
     private static final int MAX_RECORDS = 16;
-    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocateDirect;
-    private final ByteBufferOps bufferOps = new ByteBufferOps();
-    private final BufferStore<ByteBuffer> store =
+    private final IntFunction<UnsafeBuffer> bufferFactory = len -> new UnsafeBuffer(ByteBuffer.allocateDirect(len));
+    private final BufferOps<UnsafeBuffer> bufferOps = new UnsafeBufferOps();
+    private final BufferStore<UnsafeBuffer> store =
             new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
-    private final OrderByteBufferTranscoder transcoder = new OrderByteBufferTranscoder();
+    private final OrderUnsafeBufferTranscoder transcoder = new OrderUnsafeBufferTranscoder();
 
     @Test
     void shouldStoreAndLoad()
@@ -163,14 +164,14 @@ class ByteBufferStoreTest
         final long randomSeed = System.nanoTime();
         final Random random = new Random(randomSeed);
         final int maxRecords = 50_000;
-        final BufferStore<ByteBuffer> store = new BufferStore<>(128, maxRecords, bufferFactory, bufferOps);
+        final BufferStore<UnsafeBuffer> store = new BufferStore<>(128, maxRecords, bufferFactory, bufferOps);
         final LongHashSet createdIds = new LongHashSet();
         final LongHashSet removedIds = new LongHashSet();
 
         for (int i = 0; i < maxRecords; i++)
         {
             final long id = random.nextLong();
-            store.store(transcoder, Order.of(id), ByteBufferStoreTest::idOf);
+            store.store(transcoder, Order.of(id), UnsafeBufferStoreTest::idOf);
             createdIds.add(id);
         }
 
@@ -196,7 +197,7 @@ class ByteBufferStoreTest
         }
     }
 
-    private void assertContent(final BufferStore<ByteBuffer> store, final LongHashSet createdIds,
+    private void assertContent(final BufferStore<UnsafeBuffer> store, final LongHashSet createdIds,
                                final LongHashSet removedIds)
     {
         final Order container = Order.of(99999L);

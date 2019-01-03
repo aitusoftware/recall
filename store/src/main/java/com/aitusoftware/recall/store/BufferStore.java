@@ -8,7 +8,7 @@ import org.agrona.collections.Long2LongHashMap;
 import java.io.OutputStream;
 import java.util.function.IntFunction;
 
-public final class ByteBufferStore<B> implements Store<B>
+public final class BufferStore<B> implements Store<B>
 {
     private static final long NOT_IN_MAP = Long.MIN_VALUE;
     private final B buffer;
@@ -18,7 +18,7 @@ public final class ByteBufferStore<B> implements Store<B>
     private final BufferOps<B> bufferOps;
     private int nextWriteOffset;
 
-    public ByteBufferStore(
+    public BufferStore(
             final int maxRecordLength, final int maxRecords,
             final IntFunction<B> bufferFactory,
             final BufferOps<B> bufferOps)
