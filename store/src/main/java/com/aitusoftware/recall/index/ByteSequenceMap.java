@@ -7,7 +7,7 @@ import java.util.function.IntFunction;
 import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
 
-public final class ByteSequenceIndex
+public final class ByteSequenceMap
 {
     private static final int ID_OFFSET = 0;
     private static final int LENGTH_OFFSET = Long.BYTES;
@@ -24,12 +24,12 @@ public final class ByteSequenceIndex
     private int entrySize;
     private int endOfBuffer;
 
-    public ByteSequenceIndex(final int maxKeyLength, final int initialSize)
+    public ByteSequenceMap(final int maxKeyLength, final int initialSize)
     {
-        this(maxKeyLength, initialSize, ByteSequenceIndex::defaultHash);
+        this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash);
     }
 
-    ByteSequenceIndex(final int maxKeyLength, final int initialSize, final ToIntFunction<ByteBuffer> hash)
+    ByteSequenceMap(final int maxKeyLength, final int initialSize, final ToIntFunction<ByteBuffer> hash)
     {
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         mask = totalEntryCount - 1;

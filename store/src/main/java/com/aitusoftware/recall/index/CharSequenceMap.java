@@ -7,7 +7,7 @@ import java.util.function.IntFunction;
 import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
 
-public final class CharSequenceIndex
+public final class CharSequenceMap
 {
     private final ToIntFunction<CharSequence> hash;
     private final CharArrayCharSequence charBuffer = new CharArrayCharSequence();
@@ -22,12 +22,12 @@ public final class CharSequenceIndex
     private int idOffset;
     private int maxCandidateIndex;
 
-    public CharSequenceIndex(final int maxKeyLength, final int initialSize)
+    public CharSequenceMap(final int maxKeyLength, final int initialSize)
     {
-        this(maxKeyLength, initialSize, CharSequenceIndex::defaultHash);
+        this(maxKeyLength, initialSize, CharSequenceMap::defaultHash);
     }
 
-    CharSequenceIndex(final int maxKeyLength, final int initialSize, final ToIntFunction<CharSequence> hash)
+    CharSequenceMap(final int maxKeyLength, final int initialSize, final ToIntFunction<CharSequence> hash)
     {
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         mask = totalEntryCount - 1;
@@ -213,7 +213,12 @@ public final class CharSequenceIndex
         @Override
         public String toString()
         {
-            return CharArrayCharSequence.class.getSimpleName();
+            final StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < length; i++)
+            {
+                builder.append(charAt(i));
+            }
+            return builder.toString();
         }
     }
 }
