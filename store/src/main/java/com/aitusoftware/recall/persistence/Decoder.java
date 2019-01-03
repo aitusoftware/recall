@@ -2,5 +2,5 @@ package com.aitusoftware.recall.persistence;
 
 public interface Decoder<B, T>
 {
-    void load(B buffer, T container);
+    void load(final B buffer, final int offset, final T container);
 }

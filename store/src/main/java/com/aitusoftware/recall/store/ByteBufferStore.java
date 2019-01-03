@@ -6,49 +6,47 @@ import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.Long2LongHashMap;
 
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
+import java.util.function.IntFunction;
 
-public final class ByteBufferStore implements Store<ByteBuffer>
+public final class ByteBufferStore<B> implements Store<B>
 {
     private static final long NOT_IN_MAP = Long.MIN_VALUE;
-    private final ByteBuffer buffer;
-    private final ByteBuffer readSlice;
+    private final B buffer;
     private final Long2LongHashMap index = new Long2LongHashMap(NOT_IN_MAP);
     private final int internalRecordLength;
     private final int bufferCapacity;
-    private final int numberOfLongsInRecord;
-    private final int numberOfTrailingBytesInRecord;
+    private final BufferOps<B> bufferOps;
     private int nextWriteOffset;
 
-    public ByteBufferStore(final int maxRecordLength, final int maxRecords)
+    public ByteBufferStore(
+            final int maxRecordLength, final int maxRecords,
+            final IntFunction<B> bufferFactory,
+            final BufferOps<B> bufferOps)
     {
         internalRecordLength = maxRecordLength + Long.BYTES;
-        buffer = ByteBuffer.allocateDirect(internalRecordLength * maxRecords);
-        readSlice = buffer.slice();
-        bufferCapacity = buffer.capacity();
-        numberOfLongsInRecord = maxRecordLength / Long.BYTES;
-        numberOfTrailingBytesInRecord = maxRecordLength % Long.BYTES;
+        bufferCapacity = internalRecordLength * maxRecords;
+        this.bufferOps = bufferOps;
+        buffer = bufferFactory.apply(bufferCapacity);
     }
 
     @Override
     public <T> boolean load(final long id,
-                            final Decoder<ByteBuffer, T> decoder, final T container)
+                            final Decoder<B, T> decoder, final T container)
     {
         final long recordOffset = index.get(id);
         if (recordOffset == NOT_IN_MAP)
         {
             return false;
         }
-        readSlice.limit(((int) recordOffset) + internalRecordLength).position((int) recordOffset);
-        final long storedId = readSlice.getLong();
+        final long storedId = bufferOps.readLong(buffer, (int) recordOffset);
         assert storedId == id : String.format("stored: %d, requested: %d, at %d", storedId, id, recordOffset);
-        decoder.load(readSlice, container);
+        decoder.load(buffer, (int) recordOffset + Long.BYTES, container);
 
         return true;
     }
 
     @Override
-    public <T> void store(final Encoder<ByteBuffer, T> encoder,
+    public <T> void store(final Encoder<B, T> encoder,
                           final T value, final IdAccessor<T> idAccessor) throws CapacityExceededException
     {
         if (nextWriteOffset == bufferCapacity)
@@ -57,18 +55,19 @@ public final class ByteBufferStore implements Store<ByteBuffer>
         }
         final long valueId = idAccessor.getId(value);
         final long existingPosition = index.get(valueId);
+        final int recordWriteOffset;
         if (existingPosition != NOT_IN_MAP)
         {
-            this.buffer.limit((int) existingPosition + internalRecordLength).position((int) existingPosition + Long.BYTES);
+            recordWriteOffset = (int) existingPosition + Long.BYTES;
         }
         else
         {
             index.put(valueId, nextWriteOffset);
-            this.buffer.limit(nextWriteOffset + internalRecordLength).position(nextWriteOffset);
-            this.buffer.putLong(valueId);
+            bufferOps.writeLong(buffer, nextWriteOffset, valueId);
+            recordWriteOffset = nextWriteOffset + Long.BYTES;
             nextWriteOffset += internalRecordLength;
         }
-        encoder.store(this.buffer, value);
+        encoder.store(this.buffer, recordWriteOffset, value);
     }
 
     @Override
@@ -121,7 +120,7 @@ public final class ByteBufferStore implements Store<ByteBuffer>
     private void moveLastWrittenEntryTo(final long id, final long writeOffset)
     {
         final int sourcePosition = nextWriteOffset - internalRecordLength;
-        final long retrievedId = buffer.getLong(sourcePosition);
+        final long retrievedId = bufferOps.readLong(buffer, sourcePosition);
         if (id != retrievedId)
         {
             moveRecord((int) writeOffset, sourcePosition);
@@ -133,14 +132,6 @@ public final class ByteBufferStore implements Store<ByteBuffer>
 
     private void moveRecord(final int targetPosition, final int sourcePosition)
     {
-        for (int j = 0; j < numberOfLongsInRecord; j += Long.BYTES)
-        {
-            buffer.putLong(targetPosition + j, buffer.getLong(sourcePosition + j));
-        }
-
-        for (int j = 0; j < numberOfTrailingBytesInRecord; j++)
-        {
-            buffer.put(targetPosition + j, buffer.get(sourcePosition + j));
-        }
+        bufferOps.copyBytes(buffer, buffer, sourcePosition, targetPosition, internalRecordLength);
     }
 }

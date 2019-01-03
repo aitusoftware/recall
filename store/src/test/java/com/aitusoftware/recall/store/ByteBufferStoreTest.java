@@ -6,7 +6,9 @@ import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
 import org.agrona.collections.LongHashSet;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.function.IntFunction;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,7 +17,10 @@ class ByteBufferStoreTest
 {
     private static final long ID = 17L;
     private static final int MAX_RECORDS = 16;
-    private final ByteBufferStore store = new ByteBufferStore(64, MAX_RECORDS);
+    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocateDirect;
+    private final ByteBufferOps bufferOps = new ByteBufferOps();
+    private final ByteBufferStore<ByteBuffer> store =
+            new ByteBufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
     private final OrderByteBufferTranscoder transcoder = new OrderByteBufferTranscoder();
 
     @Test
@@ -158,7 +163,7 @@ class ByteBufferStoreTest
         final long randomSeed = System.nanoTime();
         final Random random = new Random(randomSeed);
         final int maxRecords = 50_000;
-        final ByteBufferStore store = new ByteBufferStore(128, maxRecords);
+        final ByteBufferStore<ByteBuffer> store = new ByteBufferStore<>(128, maxRecords, bufferFactory, bufferOps);
         final LongHashSet createdIds = new LongHashSet();
         final LongHashSet removedIds = new LongHashSet();
 

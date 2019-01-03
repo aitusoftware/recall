@@ -2,5 +2,5 @@ package com.aitusoftware.recall.persistence;
 
 public interface Encoder<B, T>
 {
-    void store(B buffer, T value);
+    void store(final B buffer, final int offset, final T value);
 }
