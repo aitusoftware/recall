@@ -25,5 +25,5 @@ subprojects {
     }
 }
 
-project(':store') {
+project(':recall-store') {
 }
