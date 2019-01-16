@@ -3,5 +3,5 @@ jdk:
         - oraclejdk8
 notifications:
     email: false
-script: ./gradlew check --stacktrace
+script: ./gradlew build check --stacktrace
 
