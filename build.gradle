@@ -4,6 +4,7 @@ subprojects {
     version = recallVersion
 
     apply plugin: 'java-library'
+    apply plugin: 'checkstyle'
 
     test {
         useJUnitPlatform()
@@ -11,6 +12,15 @@ subprojects {
 
     repositories {
         mavenCentral()
+    }
+
+    dependencies {
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.11'
+    }
+
+    checkstyle {
+        configFile = new File(rootDir, 'config/checkstyle.xml')
+        toolVersion = '8.11'
     }
 }
 

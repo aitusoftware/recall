@@ -13,9 +13,10 @@ public final class Order implements IdAccessor<Order>
     private int executedAtNanos;
     private AsciiCharSequence symbol;
 
-    public Order(final long id, final long createdEpochSeconds, final int createdNanos,
-                 final long instrumentId, final long executedAtEpochSeconds,
-                 final int executedAtNanos, final String symbol)
+    public Order(
+        final long id, final long createdEpochSeconds, final int createdNanos,
+        final long instrumentId, final long executedAtEpochSeconds,
+        final int executedAtNanos, final String symbol)
     {
         this.id = id;
         this.createdEpochSeconds = createdEpochSeconds;
@@ -29,8 +30,8 @@ public final class Order implements IdAccessor<Order>
     public static Order of(final long id)
     {
         return new Order(id, System.currentTimeMillis() / 1000,
-                (int) System.currentTimeMillis() % 1000, 37L,
-                0L, 0, "SYM_" + id);
+            (int)System.currentTimeMillis() % 1000, 37L,
+            0L, 0, "SYM_" + id);
     }
 
     public long getId()

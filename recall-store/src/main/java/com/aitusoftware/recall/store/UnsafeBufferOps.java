@@ -29,7 +29,9 @@ public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
     }
 
     @Override
-    protected void copyBytes(final UnsafeBuffer source, final UnsafeBuffer target, final int sourceOffset, final int targetOffset, final int length)
+    protected void copyBytes(
+        final UnsafeBuffer source, final UnsafeBuffer target, final int sourceOffset,
+        final int targetOffset, final int length)
     {
         target.putBytes(targetOffset, source, sourceOffset, length);
     }

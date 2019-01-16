@@ -34,7 +34,7 @@ public final class CharSequenceMap
         entrySize = (maxKeyLength + 3);
         idOffset = maxKeyLength + 1;
         dataBuffer = bufferFactory.apply(((maxKeyLength + 3) * Integer.BYTES) * totalEntryCount);
-        entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
+        entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         maxCandidateIndex = totalEntryCount * entrySize;
         this.hash = hash;
     }
@@ -115,7 +115,7 @@ public final class CharSequenceMap
         dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
         totalEntryCount *= 2;
         mask = totalEntryCount - 1;
-        entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
+        entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         liveEntryCount = 0;
         maxCandidateIndex = totalEntryCount * entrySize;
 
@@ -201,7 +201,7 @@ public final class CharSequenceMap
         @Override
         public char charAt(final int i)
         {
-            return (char) dataBuffer.getInt((offset + i) * Integer.BYTES);
+            return (char)dataBuffer.getInt((offset + i) * Integer.BYTES);
         }
 
         @Override

@@ -19,9 +19,9 @@ public final class BufferStore<B> implements Store<B>
     private int nextWriteOffset;
 
     public BufferStore(
-            final int maxRecordLength, final int maxRecords,
-            final IntFunction<B> bufferFactory,
-            final BufferOps<B> bufferOps)
+        final int maxRecordLength, final int maxRecords,
+        final IntFunction<B> bufferFactory,
+        final BufferOps<B> bufferOps)
     {
         internalRecordLength = maxRecordLength + Long.BYTES;
         bufferCapacity = internalRecordLength * maxRecords;
@@ -30,24 +30,25 @@ public final class BufferStore<B> implements Store<B>
     }
 
     @Override
-    public <T> boolean load(final long id,
-                            final Decoder<B, T> decoder, final T container)
+    public <T> boolean load(
+        final long id, final Decoder<B, T> decoder, final T container)
     {
         final long recordOffset = index.get(id);
         if (recordOffset == NOT_IN_MAP)
         {
             return false;
         }
-        final long storedId = bufferOps.readLong(buffer, (int) recordOffset);
+        final long storedId = bufferOps.readLong(buffer, (int)recordOffset);
         assert storedId == id : String.format("stored: %d, requested: %d, at %d", storedId, id, recordOffset);
-        decoder.load(buffer, (int) recordOffset + Long.BYTES, container);
+        decoder.load(buffer, (int)recordOffset + Long.BYTES, container);
 
         return true;
     }
 
     @Override
-    public <T> void store(final Encoder<B, T> encoder,
-                          final T value, final IdAccessor<T> idAccessor) throws CapacityExceededException
+    public <T> void store(
+        final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor)
+        throws CapacityExceededException
     {
         if (nextWriteOffset == bufferCapacity)
         {
@@ -58,7 +59,7 @@ public final class BufferStore<B> implements Store<B>
         final int recordWriteOffset;
         if (existingPosition != NOT_IN_MAP)
         {
-            recordWriteOffset = (int) existingPosition + Long.BYTES;
+            recordWriteOffset = (int)existingPosition + Long.BYTES;
         }
         else
         {
@@ -117,7 +118,7 @@ public final class BufferStore<B> implements Store<B>
         final long retrievedId = bufferOps.readLong(buffer, sourcePosition);
         if (id != retrievedId)
         {
-            moveRecord((int) writeOffset, sourcePosition);
+            moveRecord((int)writeOffset, sourcePosition);
             index.put(retrievedId, writeOffset);
         }
 

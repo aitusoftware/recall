@@ -8,11 +8,18 @@ import java.io.OutputStream;
 
 public interface Store<B>
 {
-    <T> boolean load(final long id, final Decoder<B, T> decoder, final T container);
-    <T> void store(final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor) throws CapacityExceededException;
-    boolean remove(final long id);
+    <T> boolean load(long id, Decoder<B, T> decoder, T container);
+
+    <T> void store(Encoder<B, T> encoder, T value, IdAccessor<T> idAccessor)
+        throws CapacityExceededException;
+
+    boolean remove(long id);
+
     void compact();
+
     void sync();
-    void streamTo(final OutputStream output);
+
+    void streamTo(OutputStream output);
+
     float utilisation();
 }

@@ -21,7 +21,7 @@ class UnsafeBufferStoreTest
     private final IntFunction<UnsafeBuffer> bufferFactory = len -> new UnsafeBuffer(ByteBuffer.allocateDirect(len));
     private final BufferOps<UnsafeBuffer> bufferOps = new UnsafeBufferOps();
     private final BufferStore<UnsafeBuffer> store =
-            new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
+        new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
     private final OrderUnsafeBufferTranscoder transcoder = new OrderUnsafeBufferTranscoder();
 
     @Test
@@ -62,7 +62,7 @@ class UnsafeBufferStoreTest
         final int nextWriteOffset = store.nextWriteOffset();
 
         final Order updated = new Order(ID, 17L, 37,
-                13L, 17L, 35, "Foo");
+            13L, 17L, 35, "Foo");
         store.store(transcoder, updated, updated);
 
         assertThat(store.nextWriteOffset()).isEqualTo(nextWriteOffset);
@@ -191,14 +191,15 @@ class UnsafeBufferStoreTest
         {
             assertContent(store, createdIds, removedIds);
         }
-        catch (AssertionError e)
+        catch (final AssertionError e)
         {
             throw new AssertionError("Test failed with random seed " + randomSeed, e);
         }
     }
 
-    private void assertContent(final BufferStore<UnsafeBuffer> store, final LongHashSet createdIds,
-                               final LongHashSet removedIds)
+    private void assertContent(
+        final BufferStore<UnsafeBuffer> store, final LongHashSet createdIds,
+        final LongHashSet removedIds)
     {
         final Order container = Order.of(99999L);
 

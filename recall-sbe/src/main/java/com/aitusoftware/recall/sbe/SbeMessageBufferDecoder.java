@@ -10,6 +10,6 @@ public final class SbeMessageBufferDecoder<T extends MessageDecoderFlyweight> im
     public void load(final UnsafeBuffer buffer, final int offset, final T container)
     {
         container.wrap(buffer, offset, container.sbeBlockLength(),
-                container.sbeSchemaVersion());
+            container.sbeSchemaVersion());
     }
 }

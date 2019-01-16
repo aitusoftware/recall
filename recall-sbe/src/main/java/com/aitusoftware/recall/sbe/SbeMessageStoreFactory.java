@@ -11,19 +11,21 @@ import java.util.function.IntFunction;
 
 public final class SbeMessageStoreFactory
 {
-    private SbeMessageStoreFactory() {}
+    private SbeMessageStoreFactory()
+    {
+    }
 
     public static <T extends MessageDecoderFlyweight> SingleTypeStore<UnsafeBuffer, T> forSbeMessage(
-            final T decoderFlyweight,
-            final int maxMessageLength,
-            final int maxRecords,
-            final IntFunction<UnsafeBuffer> bufferFactory,
-            final IdAccessor<T> idAccessor)
+        final T decoderFlyweight,
+        final int maxMessageLength,
+        final int maxRecords,
+        final IntFunction<UnsafeBuffer> bufferFactory,
+        final IdAccessor<T> idAccessor)
     {
         final BufferStore<UnsafeBuffer> store = new BufferStore<>(
-                maxMessageLength, maxRecords, bufferFactory, new UnsafeBufferOps());
+            maxMessageLength, maxRecords, bufferFactory, new UnsafeBufferOps());
 
         return new SingleTypeStore<>(store, new SbeMessageBufferDecoder<>(),
-                new SbeMessageBufferEncoder<>(maxMessageLength), idAccessor);
+            new SbeMessageBufferEncoder<>(maxMessageLength), idAccessor);
     }
 }

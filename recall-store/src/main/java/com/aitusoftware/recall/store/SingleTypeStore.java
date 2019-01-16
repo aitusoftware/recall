@@ -14,8 +14,8 @@ public final class SingleTypeStore<B, T>
     private final IdAccessor<T> idAccessor;
 
     public SingleTypeStore(
-            final Store<B> store, final Decoder<B, T> decoder,
-            final Encoder<B, T> encoder, final IdAccessor<T> idAccessor)
+        final Store<B> store, final Decoder<B, T> decoder,
+        final Encoder<B, T> encoder, final IdAccessor<T> idAccessor)
     {
         this.store = store;
         this.decoder = decoder;

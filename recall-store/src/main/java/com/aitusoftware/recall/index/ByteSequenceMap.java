@@ -35,7 +35,7 @@ public final class ByteSequenceMap
         mask = totalEntryCount - 1;
         entrySize = (maxKeyLength + Byte.BYTES + Integer.BYTES + Long.BYTES);
         dataBuffer = bufferFactory.apply(entrySize * totalEntryCount);
-        entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
+        entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         endOfBuffer = totalEntryCount * entrySize;
         this.hash = hash;
     }
@@ -99,7 +99,7 @@ public final class ByteSequenceMap
     {
         dataBuffer.putLong(offset, id);
         dataBuffer.putInt(offset + LENGTH_OFFSET, value.remaining());
-        dataBuffer.put(offset + USED_INDICATOR_OFFSET, (byte) 1);
+        dataBuffer.put(offset + USED_INDICATOR_OFFSET, (byte)1);
         final int endOfData = value.remaining() + offset + DATA_OFFSET;
         for (int i = offset + DATA_OFFSET; i < endOfData; i++)
         {
@@ -116,13 +116,13 @@ public final class ByteSequenceMap
         dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
         totalEntryCount *= 2;
         mask = totalEntryCount - 1;
-        entryCountToTriggerRehash = (int) (loadFactor * totalEntryCount);
+        entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         liveEntryCount = 0;
         endOfBuffer = totalEntryCount * entrySize;
 
         for (int i = 0; i < oldEntryCount; i++)
         {
-            int offset = i * entrySize;
+            final int offset = i * entrySize;
             if (oldBuffer.get(offset + USED_INDICATOR_OFFSET) != 0)
             {
 

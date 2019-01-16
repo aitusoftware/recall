@@ -15,7 +15,7 @@ class SbeMessageBufferEncoderTest
         final CarDecoder carDecoder = new CarDecoder();
         carDecoder.wrap(new UnsafeBuffer(new byte[64]), 0, carDecoder.sbeBlockLength(), 0);
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> encoder.store(new UnsafeBuffer(new byte[0]), 0, carDecoder),
-                "Unable to encode message of length 49");
+            () -> encoder.store(new UnsafeBuffer(new byte[0]), 0, carDecoder),
+            "Unable to encode message of length 49");
     }
 }

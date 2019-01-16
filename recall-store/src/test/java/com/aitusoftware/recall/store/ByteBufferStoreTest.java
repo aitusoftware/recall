@@ -20,7 +20,7 @@ class ByteBufferStoreTest
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocateDirect;
     private final ByteBufferOps bufferOps = new ByteBufferOps();
     private final BufferStore<ByteBuffer> store =
-            new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
+        new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
     private final OrderByteBufferTranscoder transcoder = new OrderByteBufferTranscoder();
 
     @Test
@@ -61,7 +61,7 @@ class ByteBufferStoreTest
         final int nextWriteOffset = store.nextWriteOffset();
 
         final Order updated = new Order(ID, 17L, 37,
-                13L, 17L, 35, "Foo");
+            13L, 17L, 35, "Foo");
         store.store(transcoder, updated, updated);
 
         assertThat(store.nextWriteOffset()).isEqualTo(nextWriteOffset);
@@ -190,14 +190,15 @@ class ByteBufferStoreTest
         {
             assertContent(store, createdIds, removedIds);
         }
-        catch (AssertionError e)
+        catch (final AssertionError e)
         {
             throw new AssertionError("Test failed with random seed " + randomSeed, e);
         }
     }
 
-    private void assertContent(final BufferStore<ByteBuffer> store, final LongHashSet createdIds,
-                               final LongHashSet removedIds)
+    private void assertContent(
+        final BufferStore<ByteBuffer> store, final LongHashSet createdIds,
+        final LongHashSet removedIds)
     {
         final Order container = Order.of(99999L);
 

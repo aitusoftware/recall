@@ -30,7 +30,7 @@ class SbeObjectStoreTest
     private static final int MAX_RECORDS = 2000;
     private final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer();
     private final BufferStore<UnsafeBuffer> bufferStore = new BufferStore<>(MAX_RECORD_LENGTH, MAX_RECORDS,
-            bufferFactory(), new UnsafeBufferOps());
+        bufferFactory(), new UnsafeBufferOps());
     private final SbeMessageBufferEncoder<CarDecoder> recallEncoder = new SbeMessageBufferEncoder<>(MAX_RECORD_LENGTH);
     private final CarIdAccessor idAccessor = new CarIdAccessor();
     private final SbeMessageBufferDecoder<CarDecoder> recallDecoder = new SbeMessageBufferDecoder<>();
@@ -39,18 +39,19 @@ class SbeObjectStoreTest
     void shouldConstructStoreForType()
     {
         final SingleTypeStore<UnsafeBuffer, CarDecoder> store =
-                SbeMessageStoreFactory.forSbeMessage(new CarDecoder(), MAX_RECORD_LENGTH, MAX_RECORDS,
-                        bufferFactory(), new CarIdAccessor());
+            SbeMessageStoreFactory.forSbeMessage(new CarDecoder(), MAX_RECORD_LENGTH, MAX_RECORDS,
+            bufferFactory(), new CarIdAccessor());
 
         final CarEncoder encoder = new CarEncoder().wrapAndApplyHeader(buffer, 0, HEADER_ENCODER);
         encoder.id(ID).available(TRUE).code(CODE)
-                .modelYear(MODEL_YEAR)
-                .manufacturer(MANUFACTURER)
-                .model(MODEL)
-                .activationCode(ACTIVATION_CODE)
-                .engine().boosterEnabled(TRUE);
+            .modelYear(MODEL_YEAR)
+            .manufacturer(MANUFACTURER)
+            .model(MODEL)
+            .activationCode(ACTIVATION_CODE)
+            .engine().boosterEnabled(TRUE);
 
-        final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH, encoder.encodedLength(), encoder.sbeSchemaVersion());
+        final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH,
+            encoder.encodedLength(), encoder.sbeSchemaVersion());
         assertThat(decoder.id()).isEqualTo(ID);
 
         store.store(decoder);
@@ -64,13 +65,14 @@ class SbeObjectStoreTest
     {
         final CarEncoder encoder = new CarEncoder().wrapAndApplyHeader(buffer, 0, HEADER_ENCODER);
         encoder.id(ID).available(TRUE).code(CODE)
-                .modelYear(MODEL_YEAR)
-                .manufacturer(MANUFACTURER)
-                .model(MODEL)
-                .activationCode(ACTIVATION_CODE)
-                .engine().boosterEnabled(TRUE);
+            .modelYear(MODEL_YEAR)
+            .manufacturer(MANUFACTURER)
+            .model(MODEL)
+            .activationCode(ACTIVATION_CODE)
+            .engine().boosterEnabled(TRUE);
 
-        final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH, encoder.encodedLength(), encoder.sbeSchemaVersion());
+        final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH,
+            encoder.encodedLength(), encoder.sbeSchemaVersion());
         assertThat(decoder.id()).isEqualTo(ID);
 
         bufferStore.store(recallEncoder, decoder, idAccessor);
@@ -99,13 +101,14 @@ class SbeObjectStoreTest
             ids[i] = id;
             final CarEncoder encoder = new CarEncoder().wrapAndApplyHeader(buffer, 0, HEADER_ENCODER);
             encoder.id(id).available(TRUE).code(CODE)
-                    .modelYear((int) (id * 17))
-                    .manufacturer(MANUFACTURER)
-                    .model(MODEL)
-                    .activationCode(ACTIVATION_CODE)
-                    .engine().boosterEnabled(TRUE);
+                .modelYear((int)(id * 17))
+                .manufacturer(MANUFACTURER)
+                .model(MODEL)
+                .activationCode(ACTIVATION_CODE)
+                .engine().boosterEnabled(TRUE);
 
-            final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH, encoder.encodedLength(), encoder.sbeSchemaVersion());
+            final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH,
+                encoder.encodedLength(), encoder.sbeSchemaVersion());
             bufferStore.store(recallEncoder, decoder, idAccessor);
         }
 

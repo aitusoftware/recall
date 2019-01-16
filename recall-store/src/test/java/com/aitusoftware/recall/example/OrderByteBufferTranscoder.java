@@ -17,12 +17,12 @@ public class OrderByteBufferTranscoder implements Encoder<ByteBuffer, Order>, De
         container.setCreatedNanos(buffer.getInt(offset + CREATED_NANOS_OFFSET));
         container.setExecutedAtEpochSeconds(buffer.getLong(offset + EXECUTED_SECONDS_OFFSET));
         container.setExecutedAtNanos(buffer.getInt(offset + EXECUTED_NANOS_OFFSET));
-        int charCount = buffer.getInt(offset + SYMBOL_LENGTH_OFFSET);
-        AsciiCharSequence symbolCharSequence = container.getSymbolCharSequence();
+        final int charCount = buffer.getInt(offset + SYMBOL_LENGTH_OFFSET);
+        final AsciiCharSequence symbolCharSequence = container.getSymbolCharSequence();
         symbolCharSequence.reset();
         for (int i = 0; i < charCount; i++)
         {
-            symbolCharSequence.append((char) buffer.get(offset + SYMBOL_VALUE_OFFSET + i));
+            symbolCharSequence.append((char)buffer.get(offset + SYMBOL_VALUE_OFFSET + i));
         }
     }
 
@@ -37,8 +37,9 @@ public class OrderByteBufferTranscoder implements Encoder<ByteBuffer, Order>, De
         buffer.putInt(offset + EXECUTED_NANOS_OFFSET, value.getExecutedAtNanos());
         final CharSequence symbol = value.getSymbol();
         buffer.putInt(offset + SYMBOL_LENGTH_OFFSET, symbol.length());
-        for (int i = 0; i < symbol.length(); i++) {
-            buffer.put(offset + SYMBOL_VALUE_OFFSET + i, (byte) symbol.charAt(i));
+        for (int i = 0; i < symbol.length(); i++)
+        {
+            buffer.put(offset + SYMBOL_VALUE_OFFSET + i, (byte)symbol.charAt(i));
         }
     }
 
