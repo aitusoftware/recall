@@ -1,6 +1,6 @@
 package com.aitusoftware.recall.store;
 
-abstract class BufferOps<T>
+public abstract class BufferOps<T>
 {
     abstract void writeLong(final T buffer, final int offset, final long value);
 

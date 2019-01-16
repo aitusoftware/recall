@@ -89,12 +89,6 @@ public final class BufferStore<B> implements Store<B>
     }
 
     @Override
-    public void grow()
-    {
-
-    }
-
-    @Override
     public void sync()
     {
 

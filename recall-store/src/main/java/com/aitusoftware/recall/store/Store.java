@@ -12,7 +12,6 @@ public interface Store<B>
     <T> void store(final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor) throws CapacityExceededException;
     boolean remove(final long id);
     void compact();
-    void grow();
     void sync();
     void streamTo(final OutputStream output);
     float utilisation();
