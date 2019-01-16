@@ -2,7 +2,7 @@ package com.aitusoftware.recall.store;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferOps extends BufferOps<ByteBuffer>
+public final class ByteBufferOps extends BufferOps<ByteBuffer>
 {
     @Override
     void writeLong(final ByteBuffer buffer, final int offset, final long value)
