@@ -23,11 +23,11 @@ https://github.com/real-logic/simple-binary-encoding/blob/master/sbe-samples/src
             <type name="numInGroup" primitiveType="uint16"/>
         </composite>
         <composite name="varStringEncoding">
-            <type name="length" primitiveType="uint32" maxValue="1073741824"/>
+            <type name="length" primitiveType="uint32" maxValue="24"/>
             <type name="varData" primitiveType="uint8" length="0" characterEncoding="UTF-8"/>
         </composite>
         <composite name="varDataEncoding">
-            <type name="length" primitiveType="uint32" maxValue="1073741824"/>
+            <type name="length" primitiveType="uint32" maxValue="36"/>
             <type name="varData" primitiveType="uint8" length="0"/>
         </composite>
     </types>

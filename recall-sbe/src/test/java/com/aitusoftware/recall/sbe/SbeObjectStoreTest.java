@@ -9,6 +9,7 @@ import com.aitusoftware.recall.store.BufferStore;
 import com.aitusoftware.recall.store.UnsafeBufferOps;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.sbe.MessageDecoderFlyweight;
 import org.junit.jupiter.api.Test;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -35,15 +36,17 @@ class SbeObjectStoreTest
                 .model(MODEL)
                 .activationCode(ACTIVATION_CODE)
                 .engine().boosterEnabled(TRUE);
+
+        // TODO detect max size by inspecting schema & maxLength on any var fields
         final BufferStore<UnsafeBuffer> bufferStore = new BufferStore<>(encoder.encodedLength(), 32,
                 len -> new UnsafeBuffer(new byte[len]), new UnsafeBufferOps());
         final CarDecoder decoder = new CarDecoder().wrap(buffer, MessageHeaderEncoder.ENCODED_LENGTH, encoder.encodedLength(), encoder.sbeSchemaVersion());
         assertThat(decoder.id()).isEqualTo(ID);
 
-        bufferStore.store(new CarBufferEncoder(), decoder, new CarIdAccessor());
+        bufferStore.store(new SbeMessageBufferEncoder<>(), decoder, new CarIdAccessor());
 
         final CarDecoder loaded = new CarDecoder();
-        assertThat(bufferStore.load(ID, new CarBufferDecoder(), loaded)).isTrue();
+        assertThat(bufferStore.load(ID, new SbeMessageBufferDecoder<>(), loaded)).isTrue();
 
         assertThat(loaded.id()).isEqualTo(ID);
         assertThat(loaded.available()).isEqualTo(TRUE);
@@ -55,21 +58,20 @@ class SbeObjectStoreTest
         assertThat(loaded.activationCode()).isEqualTo(ACTIVATION_CODE);
     }
 
-    private static final class CarBufferDecoder implements Decoder<UnsafeBuffer, CarDecoder>
+    private static final class SbeMessageBufferDecoder<T extends MessageDecoderFlyweight> implements Decoder<UnsafeBuffer, T>
     {
         @Override
-        public void load(final UnsafeBuffer buffer, final int offset, final CarDecoder container)
+        public void load(final UnsafeBuffer buffer, final int offset, final T container)
         {
             container.wrap(buffer, offset, container.sbeBlockLength(),
                     container.sbeSchemaVersion());
         }
-
     }
 
-    private static final class CarBufferEncoder implements Encoder<UnsafeBuffer, CarDecoder>
+    private static final class SbeMessageBufferEncoder<T extends MessageDecoderFlyweight> implements Encoder<UnsafeBuffer, T>
     {
         @Override
-        public void store(final UnsafeBuffer buffer, final int offset, final CarDecoder value)
+        public void store(final UnsafeBuffer buffer, final int offset, final T value)
         {
             buffer.putBytes(offset, value.buffer(), value.offset(), value.encodedLength());
         }
