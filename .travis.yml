@@ -3,5 +3,5 @@ jdk:
         - oraclejdk8
 notifications:
     email: false
-script: ./gradlew clean :recall-sbe:generateSbeFiles &&  ./gradlew check --stacktrace
+script: ./gradlew check --stacktrace
 

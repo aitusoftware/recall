@@ -1,3 +1,7 @@
+plugins {
+    id "net.minecrell.licenser" version "0.4.1"
+}
+
 def recallVersion = file('version.txt').text.trim()
 
 subprojects {
@@ -5,6 +9,7 @@ subprojects {
 
     apply plugin: 'java-library'
     apply plugin: 'checkstyle'
+    apply plugin: 'net.minecrell.licenser'
 
     test {
         useJUnitPlatform()
@@ -16,20 +21,26 @@ subprojects {
 
     dependencies {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.11'
+        testCompile group: 'com.google.truth', name: 'truth', version: '0.42'
+        testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.2'
+        testCompile 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
     }
 
     checkstyle {
        configFile = new File(rootDir, 'config/checkstyle.xml')
         toolVersion = '8.11'
     }
+
+    license {
+        header = new File(rootDir, 'config/header.txt')
+        newLine = false
+        exclude '**/*.properties'
+    }
 }
 
 project(':recall-store') {
     dependencies {
         compile 'org.agrona:agrona:0.9.28'
-        testCompile group: 'com.google.truth', name: 'truth', version: '0.42'
-        testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.2'
-        testCompile 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
     }
 }
 
@@ -38,19 +49,16 @@ project(':recall-sbe') {
         compile group: 'uk.co.real-logic', name: 'sbe-all', version: '1.10.2'
         compile project(':recall-store')
         compile 'org.agrona:agrona:0.9.28'
-        testCompile group: 'com.google.truth', name: 'truth', version: '0.42'
-        testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.2'
-        testCompile 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
     }
 
     File generatedSrcDir = file("${buildDir}/generated-sources/java")
 
     sourceSets {
-        main.java.srcDir generatedSrcDir
+        test.java.srcDir generatedSrcDir
     }
 
-    test.dependsOn('generateSbeFiles')
-
+    compileTestJava.dependsOn('generateSbeFiles')
+    
     task generateSbeFiles(type: JavaExec) {
         main 'uk.co.real_logic.sbe.SbeTool'
         classpath sourceSets.main.runtimeClasspath
@@ -59,8 +67,6 @@ project(':recall-sbe') {
     }
 }
 
-/*
 project(':recall-annotations') {
 
 }
-*/

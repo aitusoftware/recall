@@ -15,18 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.aitusoftware.recall.sbe;
+package com.aitusoftware.recall.annotation.model;
 
-import com.aitusoftware.recall.persistence.Decoder;
-import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.sbe.MessageDecoderFlyweight;
-
-public final class SbeMessageBufferDecoder<T extends MessageDecoderFlyweight> implements Decoder<UnsafeBuffer, T>
+public final class Field
 {
-    @Override
-    public void load(final UnsafeBuffer buffer, final int offset, final T container)
-    {
-        container.wrap(buffer, offset, container.sbeBlockLength(),
-            container.sbeSchemaVersion());
-    }
 }
