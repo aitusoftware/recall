@@ -58,6 +58,11 @@ public final class SingleTypeStore<B, T>
         return store.utilisation();
     }
 
+    public void clear()
+    {
+        store.clear();
+    }
+
     public Store<B> store()
     {
         return store;
