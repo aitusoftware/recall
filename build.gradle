@@ -34,7 +34,7 @@ subprojects {
     license {
         header = new File(rootDir, 'config/header.txt')
         newLine = false
-        exclude '**/*.properties'
+        exclude '**/generated-sources/**'
     }
 }
 

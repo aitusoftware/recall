@@ -23,24 +23,79 @@ import com.aitusoftware.recall.persistence.IdAccessor;
 
 import java.io.OutputStream;
 
+/**
+ * A storage medium for serialisable data.
+ *
+ * @param <B> type of the backing buffer that data will be serialised to
+ */
 public interface Store<B>
 {
+    /**
+     * Attempts to load the value belonging to the specified identifier.
+     *
+     * @param id        the identifier of the value to retrieve
+     * @param decoder   the {@link Decoder} to use to deserialise the data
+     * @param container the instance to deserialise data into
+     * @param <T>       the type of the object being deserialised
+     * @return          indicates whether the identifier was found in the store
+     */
     <T> boolean load(long id, Decoder<B, T> decoder, T container);
 
+    /**
+     * Attempts to store the a value.
+     *
+     * @param encoder    the {@link Encoder} to use to serialise the data
+     * @param value      the data to serialise
+     * @param idAccessor the function to retrieve the identifier of the value
+     * @param <T>        the type of the data
+     * @throws CapacityExceededException if the store is already full
+     */
     <T> void store(Encoder<B, T> encoder, T value, IdAccessor<T> idAccessor)
         throws CapacityExceededException;
 
+    /**
+     * Attempts to remove the value belonging to the specified identifier.
+     *
+     * @param id the identifier of the value to remove
+     * @return indicates whether the value was removed
+     */
     boolean remove(long id);
 
+    /**
+     * Perform a compaction operation on the underlying store.
+     * This is implementation dependent.
+     */
     void compact();
 
+    /**
+     * If storage is provided by an in-memory store, persist it to a more
+     * reliable medium (e.g. sync to disk).
+     */
     void sync();
 
+    /**
+     * Write contents of store to the supplied <code>OutputStream</code>.
+     *
+     * @param output the stream to write to
+     */
     void streamTo(OutputStream output);
 
+    /**
+     * Return the current utilisation of the Store capacity.
+     *
+     * @return current utilisation
+     */
     float utilisation();
 
+    /**
+     * Return the number of elements in the Store.
+     *
+     * @return number of elements
+     */
     int size();
 
+    /**
+     * Clears all entries from the Store.
+     */
     void clear();
 }
