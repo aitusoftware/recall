@@ -17,6 +17,7 @@ public final class BufferStore<B> implements Store<B>
     private final int bufferCapacity;
     private final BufferOps<B> bufferOps;
     private int nextWriteOffset;
+    private int size;
 
     public BufferStore(
         final int maxRecordLength, final int maxRecords,
@@ -67,6 +68,7 @@ public final class BufferStore<B> implements Store<B>
             bufferOps.writeLong(buffer, nextWriteOffset, valueId);
             recordWriteOffset = nextWriteOffset + Long.BYTES;
             nextWriteOffset += internalRecordLength;
+            size++;
         }
         encoder.store(this.buffer, recordWriteOffset, value);
     }
@@ -79,6 +81,7 @@ public final class BufferStore<B> implements Store<B>
         if (wasRemoved)
         {
             moveLastWrittenEntryTo(id, writeOffset);
+            size--;
         }
         return wasRemoved;
     }
@@ -105,6 +108,12 @@ public final class BufferStore<B> implements Store<B>
     public float utilisation()
     {
         return 0;
+    }
+
+    @Override
+    public int size()
+    {
+        return size;
     }
 
     int nextWriteOffset()

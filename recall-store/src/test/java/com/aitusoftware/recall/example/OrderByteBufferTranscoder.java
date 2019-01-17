@@ -6,7 +6,7 @@ import com.aitusoftware.recall.persistence.Encoder;
 
 import java.nio.ByteBuffer;
 
-public class OrderByteBufferTranscoder implements Encoder<ByteBuffer, Order>, Decoder<ByteBuffer, Order>
+public final class OrderByteBufferTranscoder implements Encoder<ByteBuffer, Order>, Decoder<ByteBuffer, Order>
 {
     @Override
     public void load(final ByteBuffer buffer, final int offset, final Order container)

@@ -22,4 +22,6 @@ public interface Store<B>
     void streamTo(OutputStream output);
 
     float utilisation();
+
+    int size();
 }

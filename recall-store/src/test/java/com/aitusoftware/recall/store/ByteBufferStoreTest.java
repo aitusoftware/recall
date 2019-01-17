@@ -113,9 +113,11 @@ class ByteBufferStoreTest
             store.store(transcoder, order, order);
         }
 
+        int expectedSize = store.size();
         for (int i = 0; i < MAX_RECORDS; i += 2)
         {
-            store.remove(i);
+            assertThat(store.remove(i)).isTrue();
+            assertThat(store.size()).isEqualTo(--expectedSize);
         }
 
         store.compact();
@@ -172,6 +174,7 @@ class ByteBufferStoreTest
             final long id = random.nextLong();
             store.store(transcoder, Order.of(id), ByteBufferStoreTest::idOf);
             createdIds.add(id);
+            assertThat(store.size()).isEqualTo(i + 1);
         }
 
         final LongHashSet.LongIterator iterator = createdIds.iterator();

@@ -5,7 +5,7 @@ import com.aitusoftware.recall.persistence.Decoder;
 import com.aitusoftware.recall.persistence.Encoder;
 import org.agrona.concurrent.UnsafeBuffer;
 
-public class OrderUnsafeBufferTranscoder implements Encoder<UnsafeBuffer, Order>, Decoder<UnsafeBuffer, Order>
+public final class OrderUnsafeBufferTranscoder implements Encoder<UnsafeBuffer, Order>, Decoder<UnsafeBuffer, Order>
 {
     @Override
     public void load(final UnsafeBuffer buffer, final int offset, final Order container)
