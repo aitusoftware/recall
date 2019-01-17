@@ -116,6 +116,14 @@ public final class BufferStore<B> implements Store<B>
         return size;
     }
 
+    @Override
+    public void clear()
+    {
+        nextWriteOffset = 0;
+        index.clear();
+        size = 0;
+    }
+
     int nextWriteOffset()
     {
         return nextWriteOffset;

@@ -24,4 +24,6 @@ public interface Store<B>
     float utilisation();
 
     int size();
+
+    void clear();
 }

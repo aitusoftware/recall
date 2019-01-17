@@ -197,6 +197,16 @@ class ByteBufferStoreTest
         {
             throw new AssertionError("Test failed with random seed " + randomSeed, e);
         }
+
+        store.clear();
+
+        assertThat(store.size()).isEqualTo(0);
+        final LongHashSet.LongIterator createdIdIterator = createdIds.iterator();
+        final Order container = Order.of(-1L);
+        while (createdIdIterator.hasNext())
+        {
+            assertThat(store.load(createdIdIterator.nextValue(), transcoder, container)).isFalse();
+        }
     }
 
     private void assertContent(
