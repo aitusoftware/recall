@@ -15,6 +15,7 @@ public final class BufferStore<B> implements Store<B>
     private final Long2LongHashMap index = new Long2LongHashMap(NOT_IN_MAP);
     private final int internalRecordLength;
     private final int bufferCapacity;
+    private final int maxRecords;
     private final BufferOps<B> bufferOps;
     private int nextWriteOffset;
     private int size;
@@ -26,6 +27,7 @@ public final class BufferStore<B> implements Store<B>
     {
         internalRecordLength = maxRecordLength + Long.BYTES;
         bufferCapacity = internalRecordLength * maxRecords;
+        this.maxRecords = maxRecords;
         this.bufferOps = bufferOps;
         buffer = bufferFactory.apply(bufferCapacity);
     }
@@ -95,7 +97,7 @@ public final class BufferStore<B> implements Store<B>
     @Override
     public void sync()
     {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -107,7 +109,7 @@ public final class BufferStore<B> implements Store<B>
     @Override
     public float utilisation()
     {
-        return 0;
+        return size / (float)maxRecords;
     }
 
     @Override
