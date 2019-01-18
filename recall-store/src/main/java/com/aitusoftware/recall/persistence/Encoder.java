@@ -18,7 +18,7 @@
 package com.aitusoftware.recall.persistence;
 
 /**
- * Serialiser to be used with a {@see Store}.
+ * Serialiser to be used with a {@code Store}.
  *
  * @param <B> type of the buffer
  * @param <T> type of the instance

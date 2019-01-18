@@ -24,7 +24,7 @@ import com.aitusoftware.recall.persistence.IdAccessor;
 import java.io.OutputStream;
 
 /**
- * A store that wraps a {@see Decoder}, {@see Encoder}, and {@see IdAccessor} to
+ * A store that wraps a {@link Decoder}, {@link Encoder}, and {@link IdAccessor} to
  * provide storage for a single type.
  *
  * @param <B> the type of the underlying buffer
@@ -40,7 +40,7 @@ public final class SingleTypeStore<B, T>
     /**
      * Constructor for the store.
      *
-     * @param store      the underlying {@see Store}
+     * @param store      the underlying {@link Store}
      * @param decoder    the decoder for deserialising
      * @param encoder    the encode for serialising
      * @param idAccessor the accessor for retrieving the type's ID
@@ -90,7 +90,7 @@ public final class SingleTypeStore<B, T>
     }
 
     /**
-     * Delegates to the underlying {@see Store}.
+     * Delegates to the underlying {@link Store}.
      */
     public void compact()
     {
@@ -98,7 +98,7 @@ public final class SingleTypeStore<B, T>
     }
 
     /**
-     * Delegates to the underlying {@see Store}.
+     * Delegates to the underlying {@link Store}.
      */
     public void sync()
     {
@@ -106,7 +106,9 @@ public final class SingleTypeStore<B, T>
     }
 
     /**
-     * Delegates to the underlying {@see Store}.
+     * Delegates to the underlying {@link Store}.
+     *
+     * @param output the target stream
      */
     public void streamTo(final OutputStream output)
     {
@@ -114,7 +116,9 @@ public final class SingleTypeStore<B, T>
     }
 
     /**
-     * Delegates to the underlying {@see Store}.
+     * Delegates to the underlying {@link Store}.
+     *
+     * @return store utilisation
      */
     public float utilisation()
     {
@@ -122,7 +126,7 @@ public final class SingleTypeStore<B, T>
     }
 
     /**
-     * Delegates to the underlying {@see Store}.
+     * Delegates to the underlying {@link Store}.
      */
     public void clear()
     {
@@ -130,8 +134,8 @@ public final class SingleTypeStore<B, T>
     }
 
     /**
-     * Retrieve the underlying {@see Store}.
-     * @return the underlying {@see Store}
+     * Retrieve the underlying {@link Store}.
+     * @return the underlying {@link Store}
      */
     public Store<B> store()
     {

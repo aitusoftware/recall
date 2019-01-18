@@ -18,7 +18,7 @@
 package com.aitusoftware.recall.persistence;
 
 /**
- * Deserialiser to be used with a {@see Store}.
+ * Deserialiser to be used with a {@code Store}.
  *
  * @param <B> type of the buffer
  * @param <T> type of the instance
