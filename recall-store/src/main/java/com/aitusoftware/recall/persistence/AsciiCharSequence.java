@@ -19,11 +19,19 @@ package com.aitusoftware.recall.persistence;
 
 import java.util.Arrays;
 
+/**
+ * Mutable {@link CharSequence}.
+ */
 public final class AsciiCharSequence implements CharSequence
 {
     private final char[] content;
     private int length;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param value the initial value
+     */
     public AsciiCharSequence(final String value)
     {
         content = new char[value.length() * 4];
@@ -31,40 +39,64 @@ public final class AsciiCharSequence implements CharSequence
         length = value.length();
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param maxLength maximum length that will be encoded
+     */
     public AsciiCharSequence(final int maxLength)
     {
         this.content = new char[maxLength];
     }
 
+    /**
+     * Reset the <code>CharSequence</code>.
+     */
     public void reset()
     {
         length = 0;
     }
 
+    /**
+     * Append a character.
+     *
+     * @param value value to append
+     */
     public void append(final char value)
     {
         content[length++] = value;
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int length()
     {
         return length;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public char charAt(final int i)
     {
         return content[i];
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public CharSequence subSequence(final int i, final int i1)
     {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString()
     {

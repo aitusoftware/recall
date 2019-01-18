@@ -17,7 +17,21 @@
  */
 package com.aitusoftware.recall.persistence;
 
+/**
+ * Serialiser to be used with a {@see Store}.
+ *
+ * @param <B> type of the buffer
+ * @param <T> type of the instance
+ */
+@FunctionalInterface
 public interface Encoder<B, T>
 {
+    /**
+     * Encodes the specified value into the supplied buffer.
+     *
+     * @param buffer target buffer
+     * @param offset offset into the buffer
+     * @param value  value to encode
+     */
     void store(B buffer, int offset, T value);
 }

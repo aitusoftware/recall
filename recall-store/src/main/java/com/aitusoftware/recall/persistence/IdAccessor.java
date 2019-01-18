@@ -17,8 +17,19 @@
  */
 package com.aitusoftware.recall.persistence;
 
+/**
+ * Function to map an instance to an ID.
+ *
+ * @param <T> the type of the instance
+ */
 @FunctionalInterface
 public interface IdAccessor<T>
 {
+    /**
+     * Return the ID belonging to the value.
+     *
+     * @param value input value
+     * @return the ID of the value
+     */
     long getId(T value);
 }

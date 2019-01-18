@@ -17,7 +17,21 @@
  */
 package com.aitusoftware.recall.persistence;
 
+/**
+ * Deserialiser to be used with a {@see Store}.
+ *
+ * @param <B> type of the buffer
+ * @param <T> type of the instance
+ */
+@FunctionalInterface
 public interface Decoder<B, T>
 {
+    /**
+     * Decodes the value at the specified offset into the supplied container instance.
+     *
+     * @param buffer    source buffer
+     * @param offset    offset into the buffer
+     * @param container receiver for the data
+     */
     void load(B buffer, int offset, T container);
 }
