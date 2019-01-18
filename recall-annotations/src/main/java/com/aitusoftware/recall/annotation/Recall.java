@@ -22,11 +22,24 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Annotation that indicates that the annotated type should trigger code generation.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Recall
 {
+    /**
+     * Prefix that will be added to generated class names.
+     *
+     * @return the prefix
+     */
     String classPrefix() default "";
 
+    /**
+     * Suffix that will be added to generated class names.
+     *
+     * @return the suffix
+     */
     String classSuffix() default "Impl";
 }
