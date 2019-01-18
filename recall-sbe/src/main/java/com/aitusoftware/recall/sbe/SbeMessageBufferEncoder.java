@@ -21,15 +21,28 @@ import com.aitusoftware.recall.persistence.Encoder;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 
+/**
+ * Encoder for SBE-encoded messages.
+ *
+ * @param <T> the type of the message
+ */
 public final class SbeMessageBufferEncoder<T extends MessageDecoderFlyweight> implements Encoder<UnsafeBuffer, T>
 {
     private final int maxMessageLength;
 
+    /**
+     * Maximum length of any message that will be stored.
+     *
+     * @param maxMessageLength max message length, in bytes
+     */
     public SbeMessageBufferEncoder(final int maxMessageLength)
     {
         this.maxMessageLength = maxMessageLength;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void store(final UnsafeBuffer buffer, final int offset, final T value)
     {

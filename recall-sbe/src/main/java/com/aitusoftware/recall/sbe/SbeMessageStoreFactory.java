@@ -26,12 +26,26 @@ import org.agrona.sbe.MessageDecoderFlyweight;
 
 import java.util.function.IntFunction;
 
+/**
+ * Factory for providing a {@link SingleTypeStore} for an SBE-encoded message.
+ */
 public final class SbeMessageStoreFactory
 {
     private SbeMessageStoreFactory()
     {
     }
 
+    /**
+     * Creates a {@link SingleTypeStore} for the specified type.
+     *
+     * @param decoderFlyweight SBE decoder type
+     * @param maxMessageLength max message length
+     * @param maxRecords       max number of records
+     * @param bufferFactory    factory for {@link UnsafeBuffer} instances
+     * @param idAccessor       function to retrieve the ID of the type
+     * @param <T>              the type of the SBE message
+     * @return the store
+     */
     public static <T extends MessageDecoderFlyweight> SingleTypeStore<UnsafeBuffer, T> forSbeMessage(
         final T decoderFlyweight,
         final int maxMessageLength,

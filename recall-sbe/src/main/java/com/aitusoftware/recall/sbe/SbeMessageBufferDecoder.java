@@ -21,8 +21,16 @@ import com.aitusoftware.recall.persistence.Decoder;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 
+/**
+ * Decoder for SBE-encoded messages.
+ *
+ * @param <T> the type of the message
+ */
 public final class SbeMessageBufferDecoder<T extends MessageDecoderFlyweight> implements Decoder<UnsafeBuffer, T>
 {
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void load(final UnsafeBuffer buffer, final int offset, final T container)
     {
