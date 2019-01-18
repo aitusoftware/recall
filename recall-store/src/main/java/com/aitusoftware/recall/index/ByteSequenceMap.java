@@ -24,6 +24,9 @@ import java.util.function.IntFunction;
 import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
 
+/**
+ * Map for storing a byte-sequence against a <code>long</code> value.
+ */
 public final class ByteSequenceMap
 {
     private static final int ID_OFFSET = 0;
@@ -41,6 +44,12 @@ public final class ByteSequenceMap
     private int entrySize;
     private int endOfBuffer;
 
+    /**
+     * Constructor for the map.
+     *
+     * @param maxKeyLength max length of any key
+     * @param initialSize  initial size of the map
+     */
     public ByteSequenceMap(final int maxKeyLength, final int initialSize)
     {
         this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash);
@@ -57,6 +66,12 @@ public final class ByteSequenceMap
         this.hash = hash;
     }
 
+    /**
+     * Insert a value into the map.
+     *
+     * @param value value to use as a key
+     * @param id    id to store
+     */
     public void insert(final ByteBuffer value, final long id)
     {
         if (liveEntryCount > entryCountToTriggerRehash)
@@ -88,6 +103,12 @@ public final class ByteSequenceMap
         }
     }
 
+    /**
+     * Searches the map for a given key.
+     *
+     * @param value      the key to search for
+     * @param idReceiver the callback for a value associated with the key
+     */
     public void search(final ByteBuffer value, final LongConsumer idReceiver)
     {
         int offset = entrySize * (hash.applyAsInt(value) & mask);

@@ -24,6 +24,9 @@ import java.util.function.IntFunction;
 import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
 
+/**
+ * Map for storing a char-sequence against a <code>long</code> value.
+ */
 public final class CharSequenceMap
 {
     private final ToIntFunction<CharSequence> hash;
@@ -39,6 +42,12 @@ public final class CharSequenceMap
     private int idOffset;
     private int maxCandidateIndex;
 
+    /**
+     * Constructor for the map.
+     *
+     * @param maxKeyLength max length of any key
+     * @param initialSize  initial size of the map
+     */
     public CharSequenceMap(final int maxKeyLength, final int initialSize)
     {
         this(maxKeyLength, initialSize, CharSequenceMap::defaultHash);
@@ -56,6 +65,12 @@ public final class CharSequenceMap
         this.hash = hash;
     }
 
+    /**
+     * Insert a value into the map.
+     *
+     * @param value value to use as a key
+     * @param id    id to store
+     */
     public void insert(final CharSequence value, final long id)
     {
         if (liveEntryCount > entryCountToTriggerRehash)
@@ -87,6 +102,12 @@ public final class CharSequenceMap
         }
     }
 
+    /**
+     * Searches the map for a given key.
+     *
+     * @param value      the key to search for
+     * @param idReceiver the callback for a value associated with the key
+     */
     public void search(final CharSequence value, final LongConsumer idReceiver)
     {
         int index = entrySize * (hash.applyAsInt(value) & mask);
