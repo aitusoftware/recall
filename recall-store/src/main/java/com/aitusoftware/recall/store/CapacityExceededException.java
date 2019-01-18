@@ -17,6 +17,9 @@
  */
 package com.aitusoftware.recall.store;
 
+/**
+ * Exception thrown by a {@link Store} when an insert would exceed capacity.
+ */
 public final class CapacityExceededException extends RuntimeException
 {
 }

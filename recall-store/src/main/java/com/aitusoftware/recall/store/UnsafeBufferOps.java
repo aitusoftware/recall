@@ -19,32 +19,50 @@ package com.aitusoftware.recall.store;
 
 import org.agrona.concurrent.UnsafeBuffer;
 
+/**
+ * Utility class for performing operations on an {@link UnsafeBuffer}.
+ */
 public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
 {
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void writeLong(final UnsafeBuffer buffer, final int offset, final long value)
     {
         buffer.putLong(offset, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     long readLong(final UnsafeBuffer buffer, final int offset)
     {
         return buffer.getLong(offset);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void writeByte(final UnsafeBuffer buffer, final int offset, final byte value)
     {
         buffer.putByte(offset, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     byte readByte(final UnsafeBuffer buffer, final int offset)
     {
         return buffer.getByte(offset);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void copyBytes(
         final UnsafeBuffer source, final UnsafeBuffer target, final int sourceOffset,

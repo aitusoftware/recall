@@ -23,6 +23,13 @@ import com.aitusoftware.recall.persistence.IdAccessor;
 
 import java.io.OutputStream;
 
+/**
+ * A store that wraps a {@see Decoder}, {@see Encoder}, and {@see IdAccessor} to
+ * provide storage for a single type.
+ *
+ * @param <B> the type of the underlying buffer
+ * @param <T> the type that will be stored
+ */
 public final class SingleTypeStore<B, T>
 {
     private final Store<B> store;
@@ -30,6 +37,14 @@ public final class SingleTypeStore<B, T>
     private final Encoder<B, T> encoder;
     private final IdAccessor<T> idAccessor;
 
+    /**
+     * Constructor for the store.
+     *
+     * @param store      the underlying {@see Store}
+     * @param decoder    the decoder for deserialising
+     * @param encoder    the encode for serialising
+     * @param idAccessor the accessor for retrieving the type's ID
+     */
     public SingleTypeStore(
         final Store<B> store, final Decoder<B, T> decoder,
         final Encoder<B, T> encoder, final IdAccessor<T> idAccessor)
@@ -40,46 +55,84 @@ public final class SingleTypeStore<B, T>
         this.idAccessor = idAccessor;
     }
 
+    /**
+     * Loads an entry into the specified container.
+     *
+     * @param id        id to retrieve
+     * @param container container to populate with data
+     * @return indicates whether the ID was found
+     */
     public boolean load(final long id, final T container)
     {
         return store.load(id, decoder, container);
     }
 
+    /**
+     * Stores an entry.
+     *
+     * @param value the value to be stored
+     * @throws CapacityExceededException if insertion would exceed the Store's capacity
+     */
     public void store(final T value) throws CapacityExceededException
     {
         store.store(encoder, value, idAccessor);
     }
 
+    /**
+     * Removes an entry.
+     *
+     * @param id id to remove
+     * @return indicates whether an entry was removed
+     */
     public boolean remove(final long id)
     {
         return store.remove(id);
     }
 
+    /**
+     * Delegates to the underlying {@see Store}.
+     */
     public void compact()
     {
         store.compact();
     }
 
+    /**
+     * Delegates to the underlying {@see Store}.
+     */
     public void sync()
     {
         store.sync();
     }
 
+    /**
+     * Delegates to the underlying {@see Store}.
+     */
     public void streamTo(final OutputStream output)
     {
         store.streamTo(output);
     }
 
+    /**
+     * Delegates to the underlying {@see Store}.
+     */
     public float utilisation()
     {
         return store.utilisation();
     }
 
+    /**
+     * Delegates to the underlying {@see Store}.
+     */
     public void clear()
     {
         store.clear();
     }
 
+    /**
+     * Retrieve the underlying {@see Store}.
+     * @return the underlying {@see Store}
+     */
     public Store<B> store()
     {
         return store;

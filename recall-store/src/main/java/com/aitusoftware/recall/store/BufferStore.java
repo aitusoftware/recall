@@ -25,6 +25,11 @@ import org.agrona.collections.Long2LongHashMap;
 import java.io.OutputStream;
 import java.util.function.IntFunction;
 
+/**
+ * Implementation of {@link Store} that serialises data to a buffer of type <code>B</code>.
+ *
+ * @param <B> type of the underlying buffer
+ */
 public final class BufferStore<B> implements Store<B>
 {
     private static final long NOT_IN_MAP = Long.MIN_VALUE;
@@ -37,6 +42,14 @@ public final class BufferStore<B> implements Store<B>
     private int nextWriteOffset;
     private int size;
 
+    /**
+     * Constructor for the BufferStore.
+     *
+     * @param maxRecordLength max length of any record
+     * @param maxRecords      max number of records that need to be stored
+     * @param bufferFactory   provider for the underlying buffer type
+     * @param bufferOps       provider of operations on the underlying buffer type
+     */
     public BufferStore(
         final int maxRecordLength, final int maxRecords,
         final IntFunction<B> bufferFactory,
@@ -49,6 +62,9 @@ public final class BufferStore<B> implements Store<B>
         buffer = bufferFactory.apply(bufferCapacity);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T> boolean load(
         final long id, final Decoder<B, T> decoder, final T container)
@@ -65,6 +81,9 @@ public final class BufferStore<B> implements Store<B>
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T> void store(
         final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor)
@@ -92,6 +111,9 @@ public final class BufferStore<B> implements Store<B>
         encoder.store(this.buffer, recordWriteOffset, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean remove(final long id)
     {
@@ -105,36 +127,54 @@ public final class BufferStore<B> implements Store<B>
         return wasRemoved;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void compact()
     {
         index.compact();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void sync()
     {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void streamTo(final OutputStream output)
     {
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public float utilisation()
     {
         return size / (float)maxRecords;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int size()
     {
         return size;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void clear()
     {

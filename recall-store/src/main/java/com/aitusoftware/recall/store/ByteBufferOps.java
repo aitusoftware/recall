@@ -19,26 +19,41 @@ package com.aitusoftware.recall.store;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Utility class for performing operations on an {@link ByteBuffer}.
+ */
 public final class ByteBufferOps extends BufferOps<ByteBuffer>
 {
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void writeLong(final ByteBuffer buffer, final int offset, final long value)
     {
         buffer.putLong(offset, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     long readLong(final ByteBuffer buffer, final int offset)
     {
         return buffer.getLong(offset);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void writeByte(final ByteBuffer buffer, final int offset, final byte value)
     {
         buffer.put(offset, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     byte readByte(final ByteBuffer buffer, final int offset)
     {

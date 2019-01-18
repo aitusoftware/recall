@@ -28,4 +28,9 @@ public final class Type
     {
         fieldList.add(field);
     }
+
+    public List<Field> getFieldList()
+    {
+        return fieldList;
+    }
 }
