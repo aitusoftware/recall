@@ -21,7 +21,6 @@ package com.aitusoftware.recall.store;
 import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
 import org.agrona.collections.LongHashSet;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -105,7 +104,6 @@ class ByteBufferStoreTest
         assertEquality(container, order);
     }
 
-    @Disabled
     @Test
     void shouldGrowIfInitialCapacityExceeded()
     {

@@ -42,4 +42,22 @@ class ByteBufferOpsTest
 
         assertThat(Arrays.equals(target.array(), expected.array())).isTrue();
     }
+
+    @Test
+    void shouldCopyWithinSameBuffer()
+    {
+        final byte[] data = "0123456789ABCDE".getBytes(StandardCharsets.UTF_8);
+        final ByteBuffer source = ByteBuffer.allocate(64);
+        source.put(data);
+
+        final ByteBuffer expected = ByteBuffer.allocate(64);
+        expected.put(data);
+        expected.position(19);
+        expected.put(data);
+
+        final ByteBufferOps ops = new ByteBufferOps();
+        ops.copyBytes(source, source, 0, 19, data.length);
+
+        assertThat(Arrays.equals(source.array(), expected.array())).isTrue();
+    }
 }

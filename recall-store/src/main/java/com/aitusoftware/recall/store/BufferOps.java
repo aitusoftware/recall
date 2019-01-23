@@ -72,17 +72,20 @@ public abstract class BufferOps<T>
     protected void copyBytes(
         final T source, final T target, final int sourceOffset, final int targetOffset, final int length)
     {
-        final int eightByteSegments = length / 8;
+        final int eightByteSegments = length >> 3;
+        final int singleByteOffset = eightByteSegments << 3;
         final int trailingBytes = length & 7;
-        for (int j = 0; j < eightByteSegments; j += Long.BYTES)
+        for (int j = 0; j < eightByteSegments; j++)
         {
-            writeLong(target, targetOffset + j, readLong(source, sourceOffset + j));
+            final int subOffset = j << 3;
+            writeLong(target, targetOffset + subOffset,
+                readLong(source, sourceOffset + subOffset));
         }
 
         for (int j = 0; j < trailingBytes; j++)
         {
-            writeByte(target, targetOffset + (8 * eightByteSegments) + j,
-                readByte(source, sourceOffset + (8 * eightByteSegments) + j));
+            writeByte(target, targetOffset + singleByteOffset + j,
+                readByte(source, sourceOffset + singleByteOffset + j));
         }
     }
 }
