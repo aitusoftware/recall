@@ -71,9 +71,8 @@ public final class SingleTypeStore<B, T>
      * Stores an entry.
      *
      * @param value the value to be stored
-     * @throws CapacityExceededException if insertion would exceed the Store's capacity
      */
-    public void store(final T value) throws CapacityExceededException
+    public void store(final T value)
     {
         store.store(encoder, value, idAccessor);
     }

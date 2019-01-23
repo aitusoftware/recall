@@ -48,10 +48,8 @@ public interface Store<B>
      * @param value      the data to serialise
      * @param idAccessor the function to retrieve the identifier of the value
      * @param <T>        the type of the data
-     * @throws CapacityExceededException if the store is already full
      */
-    <T> void store(Encoder<B, T> encoder, T value, IdAccessor<T> idAccessor)
-        throws CapacityExceededException;
+    <T> void store(Encoder<B, T> encoder, T value, IdAccessor<T> idAccessor);
 
     /**
      * Attempts to remove the value belonging to the specified identifier.

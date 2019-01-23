@@ -87,7 +87,6 @@ public final class BufferStore<B> implements Store<B>
     @Override
     public <T> void store(
         final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor)
-        throws CapacityExceededException
     {
         if (nextWriteOffset == bufferCapacity)
         {
