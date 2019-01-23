@@ -33,12 +33,12 @@ import java.util.function.IntFunction;
 public final class BufferStore<B> implements Store<B>
 {
     private static final long NOT_IN_MAP = Long.MIN_VALUE;
-    private final B buffer;
     private final Long2LongHashMap index = new Long2LongHashMap(NOT_IN_MAP);
     private final int internalRecordLength;
-    private final int bufferCapacity;
-    private final int maxRecords;
     private final BufferOps<B> bufferOps;
+    private final IntFunction<B> bufferFactory;
+    private int bufferCapacity;
+    private B buffer;
     private int nextWriteOffset;
     private int size;
 
@@ -57,9 +57,9 @@ public final class BufferStore<B> implements Store<B>
     {
         internalRecordLength = maxRecordLength + Long.BYTES;
         bufferCapacity = internalRecordLength * maxRecords;
-        this.maxRecords = maxRecords;
         this.bufferOps = bufferOps;
-        buffer = bufferFactory.apply(bufferCapacity);
+        this.bufferFactory = bufferFactory;
+        buffer = this.bufferFactory.apply(bufferCapacity);
     }
 
     /**
@@ -91,7 +91,10 @@ public final class BufferStore<B> implements Store<B>
     {
         if (nextWriteOffset == bufferCapacity)
         {
-            throw new CapacityExceededException();
+            final B expandedBuffer = bufferFactory.apply(bufferCapacity << 1);
+            bufferOps.copyBytes(buffer, expandedBuffer, 0, 0, bufferCapacity);
+            buffer = expandedBuffer;
+            bufferCapacity <<= 1;
         }
         final long valueId = idAccessor.getId(value);
         final long existingPosition = index.get(valueId);
@@ -160,7 +163,7 @@ public final class BufferStore<B> implements Store<B>
     @Override
     public float utilisation()
     {
-        return size / (float)maxRecords;
+        return nextWriteOffset / (float)bufferCapacity;
     }
 
     /**

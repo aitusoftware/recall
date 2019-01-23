@@ -81,7 +81,8 @@ public abstract class BufferOps<T>
 
         for (int j = 0; j < trailingBytes; j++)
         {
-            writeByte(target, targetOffset + j, readByte(source, sourceOffset + j));
+            writeByte(target, targetOffset + (8 * eightByteSegments) + j,
+                readByte(source, sourceOffset + (8 * eightByteSegments) + j));
         }
     }
 }

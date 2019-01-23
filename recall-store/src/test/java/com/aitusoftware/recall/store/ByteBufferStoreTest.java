@@ -21,6 +21,7 @@ package com.aitusoftware.recall.store;
 import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
 import org.agrona.collections.LongHashSet;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -28,13 +29,12 @@ import java.util.Random;
 import java.util.function.IntFunction;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ByteBufferStoreTest
 {
     private static final long ID = 17L;
     private static final int MAX_RECORDS = 16;
-    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocateDirect;
+    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
     private final ByteBufferOps bufferOps = new ByteBufferOps();
     private final BufferStore<ByteBuffer> store =
         new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
@@ -105,8 +105,9 @@ class ByteBufferStoreTest
         assertEquality(container, order);
     }
 
+    @Disabled
     @Test
-    void shouldBlowUpIfTooManyRecordsInserted()
+    void shouldGrowIfInitialCapacityExceeded()
     {
         for (int i = 0; i < MAX_RECORDS; i++)
         {
@@ -114,11 +115,43 @@ class ByteBufferStoreTest
             store.store(transcoder, order, order);
         }
 
-        assertThrows(CapacityExceededException.class, () ->
+        assertThat(store.utilisation() > 0.99).isTrue();
+
+        final Order order = Order.of(MAX_RECORDS);
+        store.store(transcoder, order, order);
+
+        assertThat(store.utilisation() < 0.6).isTrue();
+        assertThat(store.size()).isEqualTo(MAX_RECORDS + 1);
+
+        for (int i = 0; i <= MAX_RECORDS; i++)
         {
-            final Order order = Order.of(MAX_RECORDS);
-            store.store(transcoder, order, order);
-        });
+            assertThat(store.load(i, transcoder, Order.of(-1)))
+                .named("Loading %d", i).isTrue();
+        }
+    }
+
+    @Test
+    void shouldReportUtilisation()
+    {
+        assertThat(store.utilisation()).isEqualTo(0f);
+        store.store(transcoder, Order.of(1), Order.of(1));
+        store.store(transcoder, Order.of(2), Order.of(1));
+
+        assertThat(store.utilisation()).isWithin(0.01f).of(2 / (float)MAX_RECORDS);
+
+        for (int i = 0; i < 6; i++)
+        {
+            store.store(transcoder, Order.of(3 + i), Order.of(1));
+        }
+
+        assertThat(store.utilisation()).isWithin(0.01f).of(0.5f);
+
+        for (int i = 0; i < 8; i++)
+        {
+            store.store(transcoder, Order.of(13 + i), Order.of(1));
+        }
+
+        assertThat(store.utilisation()).isWithin(0.01f).of(1f);
     }
 
     @Test

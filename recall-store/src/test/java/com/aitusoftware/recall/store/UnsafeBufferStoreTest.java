@@ -29,7 +29,6 @@ import java.util.Random;
 import java.util.function.IntFunction;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class UnsafeBufferStoreTest
 {
@@ -107,7 +106,7 @@ class UnsafeBufferStoreTest
     }
 
     @Test
-    void shouldBlowUpIfTooManyRecordsInserted()
+    void shouldGrowIfInitialCapacityExceeded()
     {
         for (int i = 0; i < MAX_RECORDS; i++)
         {
@@ -115,11 +114,19 @@ class UnsafeBufferStoreTest
             store.store(transcoder, order, order);
         }
 
-        assertThrows(CapacityExceededException.class, () ->
+        assertThat(store.utilisation() > 0.99).isTrue();
+
+        final Order order = Order.of(MAX_RECORDS);
+        store.store(transcoder, order, order);
+
+        assertThat(store.utilisation() < 0.6).isTrue();
+        assertThat(store.size()).isEqualTo(MAX_RECORDS + 1);
+
+        for (int i = 0; i <= MAX_RECORDS; i++)
         {
-            final Order order = Order.of(MAX_RECORDS);
-            store.store(transcoder, order, order);
-        });
+            assertThat(store.load(i, transcoder, Order.of(-1)))
+                .named("Loading %d", i).isTrue();
+        }
     }
 
     @Test
