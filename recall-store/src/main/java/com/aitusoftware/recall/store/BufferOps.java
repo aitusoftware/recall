@@ -17,6 +17,7 @@
  */
 package com.aitusoftware.recall.store;
 
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 /**
@@ -98,6 +99,8 @@ public abstract class BufferOps<T>
      * @return the value at the specified offset
      */
     abstract byte readByte(T buffer, int offset);
+
+    abstract ByteOrder byteOrder();
 
     /**
      * Copy bytes between buffers.

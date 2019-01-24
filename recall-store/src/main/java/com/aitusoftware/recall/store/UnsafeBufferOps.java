@@ -19,6 +19,10 @@ package com.aitusoftware.recall.store;
 
 import org.agrona.concurrent.UnsafeBuffer;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 /**
@@ -32,7 +36,21 @@ public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
     @Override
     UnsafeBuffer createFrom(final FileChannel fileChannel, final int offset, final int length)
     {
-        return null;
+        final ByteBuffer content = ByteBuffer.allocateDirect(length);
+        try
+        {
+            fileChannel.position(0);
+            while (content.remaining() != 0)
+            {
+                fileChannel.read(content);
+            }
+        }
+        catch (final IOException e)
+        {
+            throw new UncheckedIOException(e);
+        }
+        content.clear();
+        return new UnsafeBuffer(content);
     }
 
     /**
@@ -41,6 +59,30 @@ public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
     @Override
     void storeTo(final FileChannel fileChannel, final UnsafeBuffer buffer, final int length)
     {
+        final ByteBuffer tmp = ByteBuffer.allocateDirect(4096);
+        int lengthRemaining = length;
+        int offset = 0;
+        try
+        {
+            fileChannel.position(0);
+            while (lengthRemaining != 0)
+            {
+                tmp.clear();
+                final int copyLength = Math.min(tmp.capacity(), lengthRemaining);
+                buffer.getBytes(offset, tmp, 0, copyLength);
+                tmp.position(0).limit(copyLength);
+                while (tmp.remaining() != 0)
+                {
+                    fileChannel.write(tmp);
+                }
+                lengthRemaining -= copyLength;
+                offset += copyLength;
+            }
+        }
+        catch (final IOException e)
+        {
+            throw new UncheckedIOException(e);
+        }
 
     }
 
@@ -107,5 +149,11 @@ public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
         final int targetOffset, final int length)
     {
         target.putBytes(targetOffset, source, sourceOffset, length);
+    }
+
+    @Override
+    ByteOrder byteOrder()
+    {
+        return ByteOrder.LITTLE_ENDIAN;
     }
 }

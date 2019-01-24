@@ -20,6 +20,7 @@ package com.aitusoftware.recall.store;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 /**
@@ -123,5 +124,11 @@ public final class ByteBufferOps extends BufferOps<ByteBuffer>
     byte readByte(final ByteBuffer buffer, final int offset)
     {
         return buffer.get(offset);
+    }
+
+    @Override
+    ByteOrder byteOrder()
+    {
+        return ByteOrder.BIG_ENDIAN;
     }
 }

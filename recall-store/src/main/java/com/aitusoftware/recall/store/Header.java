@@ -18,6 +18,7 @@
 package com.aitusoftware.recall.store;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 final class Header
 {
@@ -40,12 +41,13 @@ final class Header
         nextWriteOffset = bufferOps.readInt(input, offset + WRITE_OFFSET_OFFSET);
     }
 
-    void readFrom(final ByteBuffer headerBuffer)
+    void readFrom(final ByteBuffer headerBuffer, final ByteOrder byteOrder)
     {
-        version = Version.from(headerBuffer.getInt(VERSION_OFFSET));
-        storeLength = headerBuffer.getInt(STORE_LENGTH_OFFSET);
-        maxRecordLength = headerBuffer.getInt(RECORD_LENGTH_OFFSET);
-        nextWriteOffset = headerBuffer.getInt(WRITE_OFFSET_OFFSET);
+        // TODO Agrona stores values in little-endian, make bytebuffer do the same
+        version = Version.from(headerBuffer.order(byteOrder).getInt(VERSION_OFFSET));
+        storeLength = headerBuffer.order(byteOrder).getInt(STORE_LENGTH_OFFSET);
+        maxRecordLength = headerBuffer.order(byteOrder).getInt(RECORD_LENGTH_OFFSET);
+        nextWriteOffset = headerBuffer.order(byteOrder).getInt(WRITE_OFFSET_OFFSET);
     }
 
     <B> void writeTo(final B input, final BufferOps<B> bufferOps, final int offset)

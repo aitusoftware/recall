@@ -20,12 +20,19 @@ package com.aitusoftware.recall.store;
 
 import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderUnsafeBufferTranscoder;
+import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntFunction;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -33,12 +40,14 @@ import static com.google.common.truth.Truth.assertThat;
 class UnsafeBufferStoreTest
 {
     private static final long ID = 17L;
-    private static final int MAX_RECORDS = 16;
+    private static final int INITIAL_RECORDS = 16;
+    private static final int MAX_RECORD_LENGTH = 72;
     private final IntFunction<UnsafeBuffer> bufferFactory = len -> new UnsafeBuffer(ByteBuffer.allocateDirect(len));
     private final BufferOps<UnsafeBuffer> bufferOps = new UnsafeBufferOps();
     private final BufferStore<UnsafeBuffer> store =
-        new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
+        new BufferStore<>(MAX_RECORD_LENGTH, INITIAL_RECORDS, bufferFactory, bufferOps);
     private final OrderUnsafeBufferTranscoder transcoder = new OrderUnsafeBufferTranscoder();
+    private final IdAccessor<Order> idAccessor = UnsafeBufferStoreTest::idOf;
 
     @Test
     void shouldStoreAndLoad()
@@ -108,7 +117,7 @@ class UnsafeBufferStoreTest
     @Test
     void shouldGrowIfInitialCapacityExceeded()
     {
-        for (int i = 0; i < MAX_RECORDS; i++)
+        for (int i = 0; i < INITIAL_RECORDS; i++)
         {
             final Order order = Order.of(i);
             store.store(transcoder, order, order);
@@ -116,13 +125,13 @@ class UnsafeBufferStoreTest
 
         assertThat(store.utilisation() > 0.99).isTrue();
 
-        final Order order = Order.of(MAX_RECORDS);
+        final Order order = Order.of(INITIAL_RECORDS);
         store.store(transcoder, order, order);
 
         assertThat(store.utilisation() < 0.6).isTrue();
-        assertThat(store.size()).isEqualTo(MAX_RECORDS + 1);
+        assertThat(store.size()).isEqualTo(INITIAL_RECORDS + 1);
 
-        for (int i = 0; i <= MAX_RECORDS; i++)
+        for (int i = 0; i <= INITIAL_RECORDS; i++)
         {
             assertThat(store.load(i, transcoder, Order.of(-1)))
                 .named("Loading %d", i).isTrue();
@@ -132,34 +141,34 @@ class UnsafeBufferStoreTest
     @Test
     void shouldCompactAfterRemoval()
     {
-        for (int i = 0; i < MAX_RECORDS; i++)
+        for (int i = 0; i < INITIAL_RECORDS; i++)
         {
             final Order order = Order.of(i);
             store.store(transcoder, order, order);
         }
 
-        for (int i = 0; i < MAX_RECORDS; i += 2)
+        for (int i = 0; i < INITIAL_RECORDS; i += 2)
         {
             store.remove(i);
         }
 
         store.compact();
 
-        for (int i = 0; i < (MAX_RECORDS / 2); i++)
+        for (int i = 0; i < (INITIAL_RECORDS / 2); i++)
         {
-            final Order order = Order.of(i + MAX_RECORDS);
+            final Order order = Order.of(i + INITIAL_RECORDS);
             store.store(transcoder, order, order);
         }
 
         final Order container = Order.of(-1L);
 
-        for (int i = 1; i < MAX_RECORDS; i += 2)
+        for (int i = 1; i < INITIAL_RECORDS; i += 2)
         {
             assertThat(store.load(i, transcoder, container)).named("Did not find element %d", i).isTrue();
         }
-        for (int i = 0; i < (MAX_RECORDS / 2); i++)
+        for (int i = 0; i < (INITIAL_RECORDS / 2); i++)
         {
-            assertThat(store.load(i + MAX_RECORDS, transcoder, container)).isTrue();
+            assertThat(store.load(i + INITIAL_RECORDS, transcoder, container)).isTrue();
         }
     }
 
@@ -179,7 +188,7 @@ class UnsafeBufferStoreTest
 
         store.compact();
 
-        assertThat(store.nextWriteOffset()).isEqualTo(144 + Header.LENGTH);
+        assertThat(store.nextWriteOffset()).isEqualTo(160 + Header.LENGTH);
     }
 
     @Test
@@ -195,7 +204,7 @@ class UnsafeBufferStoreTest
         for (int i = 0; i < maxRecords; i++)
         {
             final long id = random.nextLong();
-            store.store(transcoder, Order.of(id), UnsafeBufferStoreTest::idOf);
+            store.store(transcoder, Order.of(id), idAccessor);
             createdIds.add(id);
         }
 
@@ -220,6 +229,32 @@ class UnsafeBufferStoreTest
             throw new AssertionError("Test failed with random seed " + randomSeed, e);
         }
     }
+
+    @Test
+    void shouldPersistAndLoad() throws IOException
+    {
+        final LongHashSet createdIds = new LongHashSet();
+        final int recordCount = INITIAL_RECORDS * 4;
+        for (int i = 0; i < recordCount; i++)
+        {
+            final long id = ThreadLocalRandom.current().nextLong();
+            createdIds.add(id);
+            store.store(transcoder, Order.of(id), idAccessor);
+        }
+        final Path storeFile = Files.createTempFile("recall", ".store");
+        final FileChannel storeChannel = FileChannel.open(storeFile.toAbsolutePath(),
+            StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.READ);
+        store.writeTo(storeChannel);
+
+        final BufferStore<UnsafeBuffer> loadedStore = BufferStore.loadFrom(storeChannel, bufferOps, bufferFactory);
+
+        final LongHashSet.LongIterator iterator = createdIds.iterator();
+        while (iterator.hasNext())
+        {
+            assertThat(loadedStore.load(iterator.nextValue(), transcoder, Order.of(77))).isTrue();
+        }
+    }
+
 
     private void assertContent(
         final BufferStore<UnsafeBuffer> store, final LongHashSet createdIds,

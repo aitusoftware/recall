@@ -112,7 +112,7 @@ public final class BufferStore<B> implements Store<B>
         }
         headerBuffer.flip();
         final Header header = new Header();
-        header.readFrom(headerBuffer);
+        header.readFrom(headerBuffer, bufferOps.byteOrder());
 
         final B buffer = bufferOps.createFrom(input, 0, header.storeLength() + Header.LENGTH);
         return new BufferStore<>(bufferFactory, bufferOps, buffer, header);
@@ -243,7 +243,7 @@ public final class BufferStore<B> implements Store<B>
     @Override
     public void clear()
     {
-        nextWriteOffset = 0;
+        nextWriteOffset = DATA_OFFSET;
         index.clear();
         size = 0;
     }

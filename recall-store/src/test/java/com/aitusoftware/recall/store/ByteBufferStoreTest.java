@@ -22,7 +22,6 @@ import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.LongHashSet;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -198,7 +197,6 @@ class ByteBufferStoreTest
         }
     }
 
-    @Disabled
     @Test
     void shouldPerformIdealCompaction()
     {
@@ -215,7 +213,7 @@ class ByteBufferStoreTest
 
         store.compact();
 
-        assertThat(store.nextWriteOffset()).isEqualTo(144 + Header.LENGTH);
+        assertThat(store.nextWriteOffset()).isEqualTo(160 + Header.LENGTH);
     }
 
     @Test
