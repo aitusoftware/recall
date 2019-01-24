@@ -21,7 +21,7 @@ import com.aitusoftware.recall.persistence.Decoder;
 import com.aitusoftware.recall.persistence.Encoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
 
-import java.io.OutputStream;
+import java.nio.channels.FileChannel;
 
 /**
  * A storage medium for serialisable data.
@@ -72,11 +72,11 @@ public interface Store<B>
     void sync();
 
     /**
-     * Write contents of store to the supplied <code>OutputStream</code>.
+     * Write contents of store to the supplied {@code FileChannel}.
      *
-     * @param output the stream to write to
+     * @param output the file to write to
      */
-    void streamTo(OutputStream output);
+    void writeTo(FileChannel output);
 
     /**
      * Return the current utilisation of the Store capacity.

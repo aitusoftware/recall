@@ -22,7 +22,10 @@ import com.aitusoftware.recall.persistence.Encoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.Long2LongHashMap;
 
-import java.io.OutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.function.IntFunction;
 
 /**
@@ -39,7 +42,7 @@ public final class BufferStore<B> implements Store<B>
     private final int internalRecordLength;
     private final BufferOps<B> bufferOps;
     private final IntFunction<B> bufferFactory;
-    private final Header header = new Header();
+    private final Header header;
     private int bufferCapacity;
     private B buffer;
     private int nextWriteOffset;
@@ -63,9 +66,56 @@ public final class BufferStore<B> implements Store<B>
         this.bufferOps = bufferOps;
         this.bufferFactory = bufferFactory;
         buffer = this.bufferFactory.apply(bufferCapacity + DATA_OFFSET);
-        header.maxRecordLength(maxRecordLength).version(Version.ONE).storeLength(bufferCapacity);
-        header.writeTo(buffer, bufferOps, HEADER_OFFSET);
         nextWriteOffset = DATA_OFFSET;
+        header = new Header();
+        header.maxRecordLength(maxRecordLength).version(Version.ONE)
+            .storeLength(bufferCapacity).nextWriteOffset(nextWriteOffset);
+        header.writeTo(buffer, bufferOps, HEADER_OFFSET);
+    }
+
+    private BufferStore(
+        final IntFunction<B> bufferFactory, final BufferOps<B> bufferOps,
+        final B existingBuffer, final Header header)
+    {
+        internalRecordLength = header.maxRecordLength() + Long.BYTES;
+        bufferCapacity = header.storeLength();
+        this.bufferOps = bufferOps;
+        this.bufferFactory = bufferFactory;
+        buffer = existingBuffer;
+        this.nextWriteOffset = header.nextWriteOffset();
+        // TODO scan values & build index
+        this.header = header;
+        final int numberOfRecords = nextWriteOffset / internalRecordLength;
+        for (int i = 0; i < numberOfRecords; i++)
+        {
+            final int entryOffset = (i * internalRecordLength) + DATA_OFFSET;
+            final long id = bufferOps.readLong(buffer, entryOffset);
+            index.put(id, entryOffset);
+        }
+    }
+
+    public static <B> BufferStore<B> loadFrom(
+        final FileChannel input, final BufferOps<B> bufferOps, final IntFunction<B> bufferFactory)
+    {
+        final ByteBuffer headerBuffer = ByteBuffer.allocateDirect(Header.LENGTH);
+        try
+        {
+            input.position(0);
+            while (headerBuffer.remaining() != 0)
+            {
+                input.read(headerBuffer);
+            }
+        }
+        catch (final IOException e)
+        {
+            throw new UncheckedIOException(e);
+        }
+        headerBuffer.flip();
+        final Header header = new Header();
+        header.readFrom(headerBuffer);
+
+        final B buffer = bufferOps.createFrom(input, 0, header.storeLength() + Header.LENGTH);
+        return new BufferStore<>(bufferFactory, bufferOps, buffer, header);
     }
 
     /**
@@ -94,6 +144,8 @@ public final class BufferStore<B> implements Store<B>
     public <T> void store(
         final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor)
     {
+        final long valueId = idAccessor.getId(value);
+
         if (nextWriteOffset == bufferCapacity + DATA_OFFSET)
         {
             final B expandedBuffer = bufferFactory.apply(bufferCapacity << 1 + Header.LENGTH);
@@ -102,7 +154,7 @@ public final class BufferStore<B> implements Store<B>
             bufferCapacity <<= 1;
             header.storeLength(bufferCapacity).writeTo(buffer, bufferOps, HEADER_OFFSET);
         }
-        final long valueId = idAccessor.getId(value);
+
         final long existingPosition = index.get(valueId);
         final int recordWriteOffset;
         if (existingPosition != NOT_IN_MAP)
@@ -156,11 +208,15 @@ public final class BufferStore<B> implements Store<B>
 
     /**
      * {@inheritDoc}
+     *
+     * @param output
      */
     @Override
-    public void streamTo(final OutputStream output)
+    public void writeTo(final FileChannel output)
     {
+        header.nextWriteOffset(nextWriteOffset).writeTo(buffer, bufferOps, HEADER_OFFSET);
 
+        bufferOps.storeTo(output, buffer, bufferCapacity + Header.LENGTH);
     }
 
     /**

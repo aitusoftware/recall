@@ -21,7 +21,7 @@ import com.aitusoftware.recall.persistence.Decoder;
 import com.aitusoftware.recall.persistence.Encoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
 
-import java.io.OutputStream;
+import java.nio.channels.FileChannel;
 
 /**
  * A store that wraps a {@link Decoder}, {@link Encoder}, and {@link IdAccessor} to
@@ -107,11 +107,11 @@ public final class SingleTypeStore<B, T>
     /**
      * Delegates to the underlying {@link Store}.
      *
-     * @param output the target stream
+     * @param output the target file
      */
-    public void streamTo(final OutputStream output)
+    public void writeTo(final FileChannel output)
     {
-        store.streamTo(output);
+        store.writeTo(output);
     }
 
     /**

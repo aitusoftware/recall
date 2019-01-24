@@ -17,28 +17,43 @@
  */
 package com.aitusoftware.recall.store;
 
+import java.nio.ByteBuffer;
+
 final class Header
 {
     static final int LENGTH = 4 * Integer.BYTES;
+    private static final int VERSION_OFFSET = 0;
     private static final int STORE_LENGTH_OFFSET = Integer.BYTES;
     private static final int RECORD_LENGTH_OFFSET = 2 * Integer.BYTES;
+    private static final int WRITE_OFFSET_OFFSET = 3 * Integer.BYTES;
 
     private Version version;
     private int storeLength;
     private int maxRecordLength;
+    private int nextWriteOffset;
 
     <B> void readFrom(final B input, final BufferOps<B> bufferOps, final int offset)
     {
-        version = Version.from(bufferOps.readInt(input, offset));
+        version = Version.from(bufferOps.readInt(input, offset + VERSION_OFFSET));
         storeLength = bufferOps.readInt(input, offset + STORE_LENGTH_OFFSET);
         maxRecordLength = bufferOps.readInt(input, offset + RECORD_LENGTH_OFFSET);
+        nextWriteOffset = bufferOps.readInt(input, offset + WRITE_OFFSET_OFFSET);
+    }
+
+    void readFrom(final ByteBuffer headerBuffer)
+    {
+        version = Version.from(headerBuffer.getInt(VERSION_OFFSET));
+        storeLength = headerBuffer.getInt(STORE_LENGTH_OFFSET);
+        maxRecordLength = headerBuffer.getInt(RECORD_LENGTH_OFFSET);
+        nextWriteOffset = headerBuffer.getInt(WRITE_OFFSET_OFFSET);
     }
 
     <B> void writeTo(final B input, final BufferOps<B> bufferOps, final int offset)
     {
-        bufferOps.writeInt(input, offset, version.getVersionNumber());
+        bufferOps.writeInt(input, offset + VERSION_OFFSET, version.getVersionNumber());
         bufferOps.writeInt(input, offset + STORE_LENGTH_OFFSET, storeLength);
         bufferOps.writeInt(input, offset + RECORD_LENGTH_OFFSET, maxRecordLength);
+        bufferOps.writeInt(input, offset + WRITE_OFFSET_OFFSET, nextWriteOffset);
     }
 
     Version version()
@@ -56,6 +71,11 @@ final class Header
         return maxRecordLength;
     }
 
+    int nextWriteOffset()
+    {
+        return nextWriteOffset;
+    }
+
     Header version(final Version version)
     {
         this.version = version;
@@ -71,6 +91,12 @@ final class Header
     Header maxRecordLength(final int maxRecordLength)
     {
         this.maxRecordLength = maxRecordLength;
+        return this;
+    }
+
+    Header nextWriteOffset(final int nextWriteOffset)
+    {
+        this.nextWriteOffset = nextWriteOffset;
         return this;
     }
 }

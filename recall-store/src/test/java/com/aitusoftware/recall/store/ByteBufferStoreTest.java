@@ -20,11 +20,19 @@ package com.aitusoftware.recall.store;
 
 import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
+import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.LongHashSet;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntFunction;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -32,12 +40,14 @@ import static com.google.common.truth.Truth.assertThat;
 class ByteBufferStoreTest
 {
     private static final long ID = 17L;
-    private static final int MAX_RECORDS = 16;
+    private static final int INITIAL_RECORDS = 16;
+    private static final int MAX_RECORD_LENGTH = 72;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
     private final ByteBufferOps bufferOps = new ByteBufferOps();
     private final BufferStore<ByteBuffer> store =
-        new BufferStore<>(64, MAX_RECORDS, bufferFactory, bufferOps);
+        new BufferStore<>(MAX_RECORD_LENGTH, INITIAL_RECORDS, bufferFactory, bufferOps);
     private final OrderByteBufferTranscoder transcoder = new OrderByteBufferTranscoder();
+    private final IdAccessor<Order> idAccessor = ByteBufferStoreTest::idOf;
 
     @Test
     void shouldStoreAndLoad()
@@ -107,7 +117,7 @@ class ByteBufferStoreTest
     @Test
     void shouldGrowIfInitialCapacityExceeded()
     {
-        for (int i = 0; i < MAX_RECORDS; i++)
+        for (int i = 0; i < INITIAL_RECORDS; i++)
         {
             final Order order = Order.of(i);
             store.store(transcoder, order, order);
@@ -115,13 +125,13 @@ class ByteBufferStoreTest
 
         assertThat(store.utilisation() > 0.99).isTrue();
 
-        final Order order = Order.of(MAX_RECORDS);
+        final Order order = Order.of(INITIAL_RECORDS);
         store.store(transcoder, order, order);
 
         assertThat(store.utilisation() < 0.6).isTrue();
-        assertThat(store.size()).isEqualTo(MAX_RECORDS + 1);
+        assertThat(store.size()).isEqualTo(INITIAL_RECORDS + 1);
 
-        for (int i = 0; i <= MAX_RECORDS; i++)
+        for (int i = 0; i <= INITIAL_RECORDS; i++)
         {
             assertThat(store.load(i, transcoder, Order.of(-1)))
                 .named("Loading %d", i).isTrue();
@@ -135,7 +145,7 @@ class ByteBufferStoreTest
         store.store(transcoder, Order.of(1), Order.of(1));
         store.store(transcoder, Order.of(2), Order.of(1));
 
-        assertThat(store.utilisation()).isWithin(0.01f).of(2 / (float)MAX_RECORDS);
+        assertThat(store.utilisation()).isWithin(0.01f).of(2 / (float)INITIAL_RECORDS);
 
         for (int i = 0; i < 6; i++)
         {
@@ -155,14 +165,14 @@ class ByteBufferStoreTest
     @Test
     void shouldCompactAfterRemoval()
     {
-        for (int i = 0; i < MAX_RECORDS; i++)
+        for (int i = 0; i < INITIAL_RECORDS; i++)
         {
             final Order order = Order.of(i);
             store.store(transcoder, order, order);
         }
 
         int expectedSize = store.size();
-        for (int i = 0; i < MAX_RECORDS; i += 2)
+        for (int i = 0; i < INITIAL_RECORDS; i += 2)
         {
             assertThat(store.remove(i)).isTrue();
             assertThat(store.size()).isEqualTo(--expectedSize);
@@ -170,24 +180,25 @@ class ByteBufferStoreTest
 
         store.compact();
 
-        for (int i = 0; i < (MAX_RECORDS / 2); i++)
+        for (int i = 0; i < (INITIAL_RECORDS / 2); i++)
         {
-            final Order order = Order.of(i + MAX_RECORDS);
+            final Order order = Order.of(i + INITIAL_RECORDS);
             store.store(transcoder, order, order);
         }
 
         final Order container = Order.of(-1L);
 
-        for (int i = 1; i < MAX_RECORDS; i += 2)
+        for (int i = 1; i < INITIAL_RECORDS; i += 2)
         {
             assertThat(store.load(i, transcoder, container)).named("Did not find element %d", i).isTrue();
         }
-        for (int i = 0; i < (MAX_RECORDS / 2); i++)
+        for (int i = 0; i < (INITIAL_RECORDS / 2); i++)
         {
-            assertThat(store.load(i + MAX_RECORDS, transcoder, container)).isTrue();
+            assertThat(store.load(i + INITIAL_RECORDS, transcoder, container)).isTrue();
         }
     }
 
+    @Disabled
     @Test
     void shouldPerformIdealCompaction()
     {
@@ -254,6 +265,31 @@ class ByteBufferStoreTest
         while (createdIdIterator.hasNext())
         {
             assertThat(store.load(createdIdIterator.nextValue(), transcoder, container)).isFalse();
+        }
+    }
+
+    @Test
+    void shouldPersistAndLoad() throws IOException
+    {
+        final LongHashSet createdIds = new LongHashSet();
+        final int recordCount = INITIAL_RECORDS * 4;
+        for (int i = 0; i < recordCount; i++)
+        {
+            final long id = ThreadLocalRandom.current().nextLong();
+            createdIds.add(id);
+            store.store(transcoder, Order.of(id), idAccessor);
+        }
+        final Path storeFile = Files.createTempFile("recall", ".store");
+        final FileChannel storeChannel = FileChannel.open(storeFile.toAbsolutePath(),
+            StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.READ);
+        store.writeTo(storeChannel);
+
+        final BufferStore<ByteBuffer> loadedStore = BufferStore.loadFrom(storeChannel, bufferOps, bufferFactory);
+
+        final LongHashSet.LongIterator iterator = createdIds.iterator();
+        while (iterator.hasNext())
+        {
+            assertThat(loadedStore.load(iterator.nextValue(), transcoder, Order.of(77))).isTrue();
         }
     }
 

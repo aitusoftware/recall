@@ -19,11 +19,31 @@ package com.aitusoftware.recall.store;
 
 import org.agrona.concurrent.UnsafeBuffer;
 
+import java.nio.channels.FileChannel;
+
 /**
  * Utility class for performing operations on an {@link UnsafeBuffer}.
  */
 public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
 {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    UnsafeBuffer createFrom(final FileChannel fileChannel, final int offset, final int length)
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    void storeTo(final FileChannel fileChannel, final UnsafeBuffer buffer, final int length)
+    {
+
+    }
+
     /**
      * {@inheritDoc}
      */

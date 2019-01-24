@@ -17,6 +17,8 @@
  */
 package com.aitusoftware.recall.store;
 
+import java.nio.channels.FileChannel;
+
 /**
  * Utility class for performing operations on a buffer.
  *
@@ -24,6 +26,25 @@ package com.aitusoftware.recall.store;
  */
 public abstract class BufferOps<T>
 {
+    /**
+     * Create a buffer populated with the contents of the supplied file.
+     *
+     * @param fileChannel   input file
+     * @param offset        offset to start reading from
+     * @param length        length of data
+     * @return the buffer
+     */
+    abstract T createFrom(FileChannel fileChannel, int offset, int length);
+
+    /**
+     * Store a buffer to the supplied file.
+     *
+     * @param fileChannel output file
+     * @param buffer      data
+     * @param length      length of data
+     */
+    abstract void storeTo(FileChannel fileChannel, T buffer, int length);
+
     /**
      * Write a long to the specified buffer.
      *

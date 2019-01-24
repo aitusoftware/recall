@@ -17,13 +17,60 @@
  */
 package com.aitusoftware.recall.store;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * Utility class for performing operations on an {@link ByteBuffer}.
  */
 public final class ByteBufferOps extends BufferOps<ByteBuffer>
 {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    ByteBuffer createFrom(final FileChannel fileChannel, final int offset, final int length)
+    {
+        final ByteBuffer buffer = ByteBuffer.allocateDirect(length);
+        try
+        {
+            fileChannel.position(offset);
+            while (buffer.remaining() != 0)
+            {
+                fileChannel.read(buffer);
+            }
+        }
+        catch (final IOException e)
+        {
+            throw new UncheckedIOException(e);
+        }
+        buffer.flip();
+        return buffer;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    void storeTo(final FileChannel fileChannel, final ByteBuffer buffer, final int length)
+    {
+        int lengthRemaining = length;
+        buffer.position(0).limit(length);
+        while (lengthRemaining != 0)
+        {
+            try
+            {
+                lengthRemaining -= fileChannel.write(buffer);
+            }
+            catch (final IOException e)
+            {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
