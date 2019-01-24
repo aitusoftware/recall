@@ -151,6 +151,9 @@ public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
         target.putBytes(targetOffset, source, sourceOffset, length);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ByteOrder byteOrder()
     {

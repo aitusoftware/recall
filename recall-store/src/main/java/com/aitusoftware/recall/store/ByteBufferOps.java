@@ -126,6 +126,9 @@ public final class ByteBufferOps extends BufferOps<ByteBuffer>
         return buffer.get(offset);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ByteOrder byteOrder()
     {

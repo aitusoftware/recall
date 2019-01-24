@@ -100,6 +100,11 @@ public abstract class BufferOps<T>
      */
     abstract byte readByte(T buffer, int offset);
 
+    /**
+     * Byte Order of the underlying buffer type.
+     *
+     * @return the byte order
+     */
     abstract ByteOrder byteOrder();
 
     /**
