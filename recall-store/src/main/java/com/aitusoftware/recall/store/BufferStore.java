@@ -33,10 +33,13 @@ import java.util.function.IntFunction;
 public final class BufferStore<B> implements Store<B>
 {
     private static final long NOT_IN_MAP = Long.MIN_VALUE;
+    private static final int DATA_OFFSET = Header.LENGTH;
+    private static final int HEADER_OFFSET = 0;
     private final Long2LongHashMap index = new Long2LongHashMap(NOT_IN_MAP);
     private final int internalRecordLength;
     private final BufferOps<B> bufferOps;
     private final IntFunction<B> bufferFactory;
+    private final Header header = new Header();
     private int bufferCapacity;
     private B buffer;
     private int nextWriteOffset;
@@ -46,20 +49,23 @@ public final class BufferStore<B> implements Store<B>
      * Constructor for the BufferStore.
      *
      * @param maxRecordLength max length of any record
-     * @param maxRecords      max number of records that need to be stored
+     * @param initialSize     initial number of records that need to be stored
      * @param bufferFactory   provider for the underlying buffer type
      * @param bufferOps       provider of operations on the underlying buffer type
      */
     public BufferStore(
-        final int maxRecordLength, final int maxRecords,
+        final int maxRecordLength, final int initialSize,
         final IntFunction<B> bufferFactory,
         final BufferOps<B> bufferOps)
     {
         internalRecordLength = maxRecordLength + Long.BYTES;
-        bufferCapacity = internalRecordLength * maxRecords;
+        bufferCapacity = internalRecordLength * initialSize;
         this.bufferOps = bufferOps;
         this.bufferFactory = bufferFactory;
-        buffer = this.bufferFactory.apply(bufferCapacity);
+        buffer = this.bufferFactory.apply(bufferCapacity + DATA_OFFSET);
+        header.maxRecordLength(maxRecordLength).version(Version.ONE).storeLength(bufferCapacity);
+        header.writeTo(buffer, bufferOps, HEADER_OFFSET);
+        nextWriteOffset = DATA_OFFSET;
     }
 
     /**
@@ -88,12 +94,13 @@ public final class BufferStore<B> implements Store<B>
     public <T> void store(
         final Encoder<B, T> encoder, final T value, final IdAccessor<T> idAccessor)
     {
-        if (nextWriteOffset == bufferCapacity)
+        if (nextWriteOffset == bufferCapacity + DATA_OFFSET)
         {
-            final B expandedBuffer = bufferFactory.apply(bufferCapacity << 1);
-            bufferOps.copyBytes(buffer, expandedBuffer, 0, 0, bufferCapacity);
+            final B expandedBuffer = bufferFactory.apply(bufferCapacity << 1 + Header.LENGTH);
+            bufferOps.copyBytes(buffer, expandedBuffer, DATA_OFFSET, DATA_OFFSET, bufferCapacity);
             buffer = expandedBuffer;
             bufferCapacity <<= 1;
+            header.storeLength(bufferCapacity).writeTo(buffer, bufferOps, HEADER_OFFSET);
         }
         final long valueId = idAccessor.getId(value);
         final long existingPosition = index.get(valueId);
@@ -162,7 +169,7 @@ public final class BufferStore<B> implements Store<B>
     @Override
     public float utilisation()
     {
-        return nextWriteOffset / (float)bufferCapacity;
+        return (nextWriteOffset - Header.LENGTH) / (float)bufferCapacity;
     }
 
     /**

@@ -204,7 +204,7 @@ class ByteBufferStoreTest
 
         store.compact();
 
-        assertThat(store.nextWriteOffset()).isEqualTo(144);
+        assertThat(store.nextWriteOffset()).isEqualTo(144 + Header.LENGTH);
     }
 
     @Test

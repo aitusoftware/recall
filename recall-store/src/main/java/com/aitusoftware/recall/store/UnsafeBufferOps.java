@@ -46,6 +46,24 @@ public final class UnsafeBufferOps extends BufferOps<UnsafeBuffer>
      * {@inheritDoc}
      */
     @Override
+    void writeInt(final UnsafeBuffer buffer, final int offset, final int value)
+    {
+        buffer.putInt(offset, value);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    int readInt(final UnsafeBuffer buffer, final int offset)
+    {
+        return buffer.getInt(offset);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     void writeByte(final UnsafeBuffer buffer, final int offset, final byte value)
     {
         buffer.putByte(offset, value);

@@ -46,6 +46,24 @@ public final class ByteBufferOps extends BufferOps<ByteBuffer>
      * {@inheritDoc}
      */
     @Override
+    void writeInt(final ByteBuffer buffer, final int offset, final int value)
+    {
+        buffer.putInt(offset, value);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    int readInt(final ByteBuffer buffer, final int offset)
+    {
+        return buffer.getInt(offset);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     void writeByte(final ByteBuffer buffer, final int offset, final byte value)
     {
         buffer.put(offset, value);

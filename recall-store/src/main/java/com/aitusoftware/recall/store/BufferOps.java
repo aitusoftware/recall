@@ -43,6 +43,24 @@ public abstract class BufferOps<T>
     abstract long readLong(T buffer, int offset);
 
     /**
+     * Write an int to the specified buffer.
+     *
+     * @param buffer the target buffer
+     * @param offset the offset into the buffer
+     * @param value  the value to write
+     */
+    abstract void writeInt(T buffer, int offset, int value);
+
+    /**
+     * Read an int from the specified buffer.
+     *
+     * @param buffer the source buffer
+     * @param offset the offset into the buffer
+     * @return the value at the specified offset
+     */
+    abstract int readInt(T buffer, int offset);
+
+    /**
      * Write a byte to the specified buffer.
      *
      * @param buffer the target buffer
