@@ -148,7 +148,7 @@ public final class BufferStore<B> implements Store<B>
 
         if (nextWriteOffset == bufferCapacity + DATA_OFFSET)
         {
-            final B expandedBuffer = bufferFactory.apply(bufferCapacity << 1 + Header.LENGTH);
+            final B expandedBuffer = bufferFactory.apply((bufferCapacity << 1) + Header.LENGTH);
             bufferOps.copyBytes(buffer, expandedBuffer, DATA_OFFSET, DATA_OFFSET, bufferCapacity);
             buffer = expandedBuffer;
             bufferCapacity <<= 1;
