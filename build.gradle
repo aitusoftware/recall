@@ -1,8 +1,17 @@
 plugins {
-    id "net.minecrell.licenser" version "0.4.1"
+    id 'net.minecrell.licenser' version '0.4.1' apply false
+    id 'me.champeau.gradle.jmh' version '0.4.8' apply false
 }
 
 def recallVersion = file('version.txt').text.trim()
+
+subprojects {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+}
 
 subprojects {
     version = recallVersion
@@ -15,9 +24,7 @@ subprojects {
         useJUnitPlatform()
     }
 
-    repositories {
-        mavenCentral()
-    }
+
 
     dependencies {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.11'
@@ -56,8 +63,21 @@ subprojects {
 
 
 project(':recall-store') {
+    apply plugin: 'me.champeau.gradle.jmh'
+
     dependencies {
         compile 'org.agrona:agrona:0.9.28'
+        jmh 'org.openjdk.jmh:jmh-core:1.21'
+        jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.21'
+    }
+
+    jmh {
+        iterations = 5
+        fork = 2
+        warmupIterations = 3
+        warmup = '2s'
+        timeOnIteration = '5s'
+        duplicateClassesStrategy = 'warn'
     }
 }
 
