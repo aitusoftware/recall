@@ -45,8 +45,8 @@ public class OrderEncoder implements Encoder<ByteBuffer, Order> {
 ### Implement `Decoder`
 
 ```java
-public class OrderEncoder implements Encoder<ByteBuffer, Order> {
-  public void store(ByteBuffer buffer, int offset, Order target) {
+public class OrderDecoder implements Decoder<ByteBuffer, Order> {
+  public void load(ByteBuffer buffer, int offset, Order target) {
     target.setId(buffer.getLong(offset));
     target.setQuantity(buffer.getDouble(offset + Long.BYTES));
     target.setPrice(buffer.getDouble(offset + Long.BYTES + Double.BYTES));
@@ -134,7 +134,7 @@ SingleTypeStore<UnsafeBuffer, CarDecoder> messageStore =
     new CarIdAccessor());
 ```
 
-Note that it is up to the application developer to determine the maximum length
+*Note*: it is up to the application developer to determine the maximum length
 of any given SBE message (even in the case of variable-length fields).
 
 If an encoded value exceeds the specified maximum record length, then the
