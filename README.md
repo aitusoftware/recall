@@ -30,7 +30,7 @@ public class Order {
 }
 ```
 
-### `Encoder`
+### Implement `Encoder`
 
 ```java
 public class OrderEncoder implements Encoder<ByteBuffer, Order> {
@@ -42,7 +42,7 @@ public class OrderEncoder implements Encoder<ByteBuffer, Order> {
 }
 ```
 
-### `Decoder`
+### Implement `Decoder`
 
 ```java
 public class OrderEncoder implements Encoder<ByteBuffer, Order> {
@@ -54,7 +54,7 @@ public class OrderEncoder implements Encoder<ByteBuffer, Order> {
 }
 ```
 
-### `IdAccessor`
+### Implement `IdAccessor`
 
 ```java
 public class OrderIdAccessor implements IdAccessor<Order> {
@@ -81,7 +81,7 @@ SingleTypeStore<ByteBuffer, Order> typeStore =
     new OrderIdAccessor());
 ```
 
-### Store and Load
+### Storage and Retrieval
 
 Domain objects can be serialised to off-heap storage, and retrieved at a later time:
 
@@ -93,4 +93,77 @@ typeStore.store(testOrder);
 Order container = new Order(-1, -1, -1);
 assert typeStore.load(orderId, container);
 assert container.getQuantity() == 12.34D;
+```
+
+## SBE integration
+
+Recall is able to provide efficient off-heap storage of SBE-encoded messages.
+
+This example uses the canonical `Car` example from
+[SBE](https://github.com/real-logic/simple-binary-encoding/blob/master/sbe-tool/src/test/resources/example-schema.xml).
+
+### SBE codecs
+
+SBE objects must be generated with:
+
+`-Dsbe.java.generate.interfaces=true`
+
+this causes the `Decoder` to implement `MessageDecoderFlyweight`.
+
+### Implement `IdAccessor`
+
+It is necessary to implement the `IdAccessor` interface for the SBE `Decoder` type:
+
+```java
+public class CarIdAccessor implements IdAccessor<CarDecoder> {
+  public long getId(CarDecoder decoder) {
+    return decoder.id();
+  }
+}
+```
+
+### SBE Message Store
+
+Create a `SingleTypeStore` for the type of the `Decoder`:
+
+```java
+SingleTypeStore<UnsafeBuffer, CarDecoder> messageStore =
+  SbeMessageStoreFactory.forSbeMessage(new CarDecoder(),
+    MAX_RECORD_LENGTH, 100,
+    len -> new UnsafeBuffer(ByteBuffer.allocateDirect(len)),
+    new CarIdAccessor());
+```
+
+Note that it is up to the application developer to determine the maximum length
+of any given SBE message (even in the case of variable-length fields).
+
+If an encoded value exceeds the specified maximum record length, then the
+`store` method will throw an `IllegalArgumentException`.
+
+SBE messages can now be stored for later retrieval:
+
+#### Storage
+
+```java
+CarDecoder decoder = new CarDecoder();
+UnsafeBuffer buffer = new UnsafeBuffer();
+ByteBuffer inputData = ByteBuffer.allocateDirect();
+channel.read(inputData);
+inputData.flip();
+buffer.wrap(inputData);
+decoder.wrap(buffer, 0, blockLength, version);
+
+dispatchCarEvent(decoder);
+messageStore.store(decoder);
+```
+
+#### Retrieval
+
+```java
+public void notifyCarSold(long carId) {
+  CarDecoder decoder = new CarDecoder();
+  messageStore.load(carId, decoder);
+
+  dispatchCarSoldEvent(decoder);
+}
 ```
