@@ -9,7 +9,7 @@ Recall is an off-heap, allocation-free object store for the JVM.
 ## Usage
 
 Recall is designed for use in allocation-free or low-garbage systems. Objects are expected to be
-mutable in order to reduce allocation costs. For this reason, domain object should have
+mutable in order to reduce allocation costs. For this reason, domain objects should have
 mutator methods for any fields that need to be serialised.
 
 Recall can use either a standard JDK `ByteBuffer` or an
@@ -145,16 +145,18 @@ SBE messages can now be stored for later retrieval:
 #### Storage
 
 ```java
-CarDecoder decoder = new CarDecoder();
-UnsafeBuffer buffer = new UnsafeBuffer();
-ByteBuffer inputData = ByteBuffer.allocateDirect();
-channel.read(inputData);
-inputData.flip();
-buffer.wrap(inputData);
-decoder.wrap(buffer, 0, blockLength, version);
+public void receiveCar(ReadableByteChannel channel) {
+  CarDecoder decoder = new CarDecoder();
+  UnsafeBuffer buffer = new UnsafeBuffer();
+  ByteBuffer inputData = ByteBuffer.allocateDirect();
+  channel.read(inputData);
+  inputData.flip();
+  buffer.wrap(inputData);
+  decoder.wrap(buffer, 0, blockLength, version);
 
-dispatchCarEvent(decoder);
-messageStore.store(decoder);
+  dispatchCarReceivedEvent(decoder);
+  messageStore.store(decoder);
+}
 ```
 
 #### Retrieval
