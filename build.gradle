@@ -74,7 +74,7 @@ project(':recall-store') {
     jmh {
         iterations = 5
         fork = 2
-        warmupIterations = 3
+        warmupIterations = 5
         warmup = '2s'
         timeOnIteration = '5s'
         duplicateClassesStrategy = 'warn'
