@@ -169,3 +169,57 @@ public void notifyCarSold(long carId) {
   dispatchCarSoldEvent(decoder);
 }
 ```
+
+## Non-integer keys
+
+Since it is sometimes useful to be able to store and retrieve objects by something other
+than an integer key, Recall also provides the ability to create mappings based on
+variable-length keys based on either strings, or byte-sequences.
+
+### `CharSequenceMap`
+
+`CharSequenceMap` is an open-addressed hash map with that can be used to store a `CharSequence`
+against an integer identifier.
+
+Example usage:
+
+```java
+private final OrderByteBufferTranscoder transcoder =
+    new OrderByteBufferTranscoder();
+private final SingleTypeStore<ByteBuffer, Order> store =
+    new SingleTypeStore<>(new BufferStore<>(MAX_RECORD_LENGTH, INITIAL_SIZE,
+        ByteBuffer::allocateDirect, new ByteBufferOps()),
+        transcoder, transcoder, Order::getId);
+private final CharSequenceMap orderBySymbol =
+    new CharSequenceMap(MAX_KEY_LENGTH, INITIAL_SIZE);
+
+private void execute()
+{
+    final String[] symbols = new String[INITIAL_SIZE];
+    for (int i = 0; i < INITIAL_SIZE; i++)
+    {
+        final Order order = Order.of(i);
+
+        store.store(order);
+        orderBySymbol.insert(order.getSymbol(), order.getId());
+        symbols[i] = order.getSymbol().toString();
+    }
+
+    final Order container = Order.of(-1L);
+    final AtomicInteger matchCount = new AtomicInteger();
+    for (int i = 0; i < INITIAL_SIZE; i++)
+    {
+        final String searchTerm = symbols[i];
+        orderBySymbol.search(searchTerm, id -> {
+            store.load(id, container);
+            matchCount.incrementAndGet();
+            System.out.printf("Order with symbol %s has id %d%n", searchTerm, id);
+        });
+    }
+
+    if (matchCount.get() != INITIAL_SIZE)
+    {
+        throw new IllegalStateException();
+    }
+}
+```

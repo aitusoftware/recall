@@ -17,8 +17,6 @@
  */
 package com.aitusoftware.recall.persistence;
 
-import java.util.Arrays;
-
 /**
  * Mutable {@link CharSequence}.
  */
@@ -100,9 +98,6 @@ public final class AsciiCharSequence implements CharSequence
     @Override
     public String toString()
     {
-        return "AsciiCharSequence{" +
-                "content=" + Arrays.toString(content) +
-                ", length=" + length +
-                '}';
+        return new String(content, 0, length);
     }
 }

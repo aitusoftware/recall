@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.aitusoftware.recall.index;
+package com.aitusoftware.recall.map;
 
 import org.agrona.BitUtil;
 

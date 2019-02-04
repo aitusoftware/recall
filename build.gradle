@@ -78,6 +78,8 @@ project(':recall-store') {
         warmup = '2s'
         timeOnIteration = '5s'
         duplicateClassesStrategy = 'warn'
+        jvmArgs = ['-Dagrona.disable.bounds.checks=true']
+        profilers = ['gc']
     }
 }
 

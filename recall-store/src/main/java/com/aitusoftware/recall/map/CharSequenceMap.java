@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.aitusoftware.recall.index;
+package com.aitusoftware.recall.map;
 
 import org.agrona.BitUtil;
 
@@ -111,15 +111,23 @@ public final class CharSequenceMap
     public void search(final CharSequence value, final LongConsumer idReceiver)
     {
         int index = entrySize * (hash.applyAsInt(value) & mask);
-        while (dataBuffer.getInt(index * Integer.BYTES) != 0)
+        // TODO implement wrapping, should continue on until entire buffer has been searched
+        int entry = 0;
+        while (entry < totalEntryCount)
         {
+            if (dataBuffer.getInt((index * Integer.BYTES) % dataBuffer.capacity()) == 0)
+            {
+                break;
+            }
+
             boolean matches = true;
+
             for (int i = 0; i < value.length(); i++)
             {
-                if (dataBuffer.getInt((dataOffset(index) + i) * Integer.BYTES) != value.charAt(i))
+                if (dataBuffer.getInt(((dataOffset(index) + i) * Integer.BYTES) %
+                    dataBuffer.capacity()) != value.charAt(i))
                 {
                     matches = false;
-                    break;
                 }
             }
             if (matches)
@@ -127,7 +135,9 @@ public final class CharSequenceMap
                 idReceiver.accept(readId(index, dataBuffer));
                 return;
             }
+
             index += entrySize;
+            entry++;
         }
     }
 
@@ -176,7 +186,7 @@ public final class CharSequenceMap
 
     private long readId(final int index, final ByteBuffer backingBuffer)
     {
-        return backingBuffer.getLong((index + idOffset) * Integer.BYTES);
+        return backingBuffer.getLong(((index + idOffset) * Integer.BYTES) % backingBuffer.capacity());
     }
 
     private boolean isIndexPositionForValue(final CharSequence value, final int index)

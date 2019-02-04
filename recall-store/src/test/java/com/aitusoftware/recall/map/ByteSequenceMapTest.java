@@ -15,21 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.aitusoftware.recall.index;
+package com.aitusoftware.recall.map;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
 
-class CharSequenceMapTest
+class ByteSequenceMapTest
 {
-    private static final String SEARCH_TERM = "searchTerm";
+    private static final ByteBuffer SEARCH_TERM = toBuffer("searchTerm");
     private static final long ID = 17L;
     private static final int INITIAL_SIZE = 16;
-    private final CharSequenceMap index = new CharSequenceMap(16, INITIAL_SIZE);
+    private final ByteSequenceMap index = new ByteSequenceMap(16, INITIAL_SIZE);
     private final List<Long> receivedList = new ArrayList<>();
 
     @Test
@@ -51,9 +53,9 @@ class CharSequenceMapTest
     @Test
     void shouldRetrieveMultipleValuesWhenHashesCollide()
     {
-        final CharSequenceMap poorIndex = new CharSequenceMap(16, 10, cs -> 7);
+        final ByteSequenceMap poorIndex = new ByteSequenceMap(16, 10, cs -> 7);
 
-        final String otherTerm = "otherTerm";
+        final ByteBuffer otherTerm = toBuffer("otherTerm");
         final long otherId = 99L;
 
         poorIndex.insert(SEARCH_TERM, ID);
@@ -72,13 +74,13 @@ class CharSequenceMapTest
         final int doubleInitialSize = INITIAL_SIZE * 2;
         for (int i = 0; i < doubleInitialSize; i++)
         {
-            index.insert("searchTerm_" + i, i);
+            index.insert(toBuffer("searchTerm_" + i), i);
         }
 
         for (int i = 0; i < doubleInitialSize; i++)
         {
             receivedList.clear();
-            assertSearchResult(index, "searchTerm_" + i, i);
+            assertSearchResult(index, toBuffer("searchTerm_" + i), i);
         }
     }
 
@@ -92,7 +94,7 @@ class CharSequenceMapTest
         assertSearchResult(index, SEARCH_TERM, otherId);
     }
 
-    private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)
+    private void assertSearchResult(final ByteSequenceMap index, final ByteBuffer searchTerm, final long retrievedId)
     {
         index.search(searchTerm, this::onReceivedId);
         assertThat(receivedList).named("Expected value %s for term %s", retrievedId, searchTerm)
@@ -102,5 +104,10 @@ class CharSequenceMapTest
     private void onReceivedId(final long id)
     {
         receivedList.add(id);
+    }
+
+    private static ByteBuffer toBuffer(final String term)
+    {
+        return ByteBuffer.wrap(term.getBytes(StandardCharsets.UTF_8));
     }
 }

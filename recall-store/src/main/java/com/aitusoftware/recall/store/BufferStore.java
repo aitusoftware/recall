@@ -83,7 +83,7 @@ public final class BufferStore<B> implements Store<B>
         this.bufferFactory = bufferFactory;
         buffer = existingBuffer;
         this.nextWriteOffset = header.nextWriteOffset();
-        // TODO scan values & build index
+        // TODO scan values & build map
         this.header = header;
         final int numberOfRecords = nextWriteOffset / internalRecordLength;
         for (int i = 0; i < numberOfRecords; i++)
