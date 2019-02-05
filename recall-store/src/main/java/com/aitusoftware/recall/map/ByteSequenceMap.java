@@ -17,12 +17,11 @@
  */
 package com.aitusoftware.recall.map;
 
-import org.agrona.BitUtil;
-
 import java.nio.ByteBuffer;
 import java.util.function.IntFunction;
-import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
+
+import org.agrona.BitUtil;
 
 /**
  * Map for storing a byte-sequence against a <code>long</code> value.
@@ -36,6 +35,7 @@ public final class ByteSequenceMap
     private final ToIntFunction<ByteBuffer> hash;
     private final float loadFactor = 0.7f;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
+    private final long missingValue;
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
@@ -49,13 +49,16 @@ public final class ByteSequenceMap
      *
      * @param maxKeyLength max length of any key
      * @param initialSize  initial size of the map
+     * @param missingValue initial size of the map
      */
-    public ByteSequenceMap(final int maxKeyLength, final int initialSize)
+    public ByteSequenceMap(final int maxKeyLength, final int initialSize, final long missingValue)
     {
-        this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash);
+        this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash, missingValue);
     }
 
-    ByteSequenceMap(final int maxKeyLength, final int initialSize, final ToIntFunction<ByteBuffer> hash)
+    ByteSequenceMap(
+        final int maxKeyLength, final int initialSize,
+        final ToIntFunction<ByteBuffer> hash, final long missingValue)
     {
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         mask = totalEntryCount - 1;
@@ -64,6 +67,7 @@ public final class ByteSequenceMap
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         endOfBuffer = totalEntryCount * entrySize;
         this.hash = hash;
+        this.missingValue = missingValue;
     }
 
     /**
@@ -107,18 +111,24 @@ public final class ByteSequenceMap
      * Searches the map for a given key.
      *
      * @param value      the key to search for
-     * @param idReceiver the callback for a value associated with the key
+     * @return the retrieved value or {@code missingValue} if it was not found
      */
-    public void search(final ByteBuffer value, final LongConsumer idReceiver)
+    public long search(final ByteBuffer value)
     {
-        int offset = entrySize * (hash.applyAsInt(value) & mask);
-        while (dataBuffer.get(offset + USED_INDICATOR_OFFSET) != 0)
+        int index = entrySize * (hash.applyAsInt(value) & mask);
+        int entry = 0;
+        while (entry < totalEntryCount)
         {
-            boolean matches = true;
-            final int endOfData = value.remaining() + offset + DATA_OFFSET;
-            for (int i = offset + DATA_OFFSET; i < endOfData; i++)
+            if (dataBuffer.get((index + USED_INDICATOR_OFFSET) % dataBuffer.capacity()) == 0)
             {
-                if (dataBuffer.get(i) != value.get(i - offset - DATA_OFFSET))
+                break;
+            }
+
+            boolean matches = true;
+            final int endOfData = value.remaining() + index + DATA_OFFSET;
+            for (int i = index + DATA_OFFSET; i < endOfData; i++)
+            {
+                if (dataBuffer.get(i % dataBuffer.capacity()) != value.get((i - index - DATA_OFFSET)))
                 {
                     matches = false;
                     break;
@@ -126,11 +136,13 @@ public final class ByteSequenceMap
             }
             if (matches)
             {
-                idReceiver.accept(dataBuffer.getLong(offset + ID_OFFSET));
-                return;
+                return dataBuffer.getLong((index + ID_OFFSET) % dataBuffer.capacity());
             }
-            offset += entrySize;
+            index += entrySize;
+            entry++;
         }
+
+        return missingValue;
     }
 
     private void insertEntry(final ByteBuffer value, final long id, final int offset)

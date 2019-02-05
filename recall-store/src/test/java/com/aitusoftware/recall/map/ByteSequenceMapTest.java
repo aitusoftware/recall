@@ -17,21 +17,21 @@
  */
 package com.aitusoftware.recall.map;
 
-import org.junit.jupiter.api.Test;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.google.common.truth.Truth.assertThat;
+import org.junit.jupiter.api.Test;
 
 class ByteSequenceMapTest
 {
     private static final ByteBuffer SEARCH_TERM = toBuffer("searchTerm");
     private static final long ID = 17L;
     private static final int INITIAL_SIZE = 16;
-    private final ByteSequenceMap index = new ByteSequenceMap(16, INITIAL_SIZE);
+    private final ByteSequenceMap index = new ByteSequenceMap(16, INITIAL_SIZE, Long.MIN_VALUE);
     private final List<Long> receivedList = new ArrayList<>();
 
     @Test
@@ -45,7 +45,7 @@ class ByteSequenceMapTest
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        index.search(SEARCH_TERM, this::onReceivedId);
+        index.search(SEARCH_TERM);
 
         assertThat(receivedList).isEmpty();
     }
@@ -53,7 +53,7 @@ class ByteSequenceMapTest
     @Test
     void shouldRetrieveMultipleValuesWhenHashesCollide()
     {
-        final ByteSequenceMap poorIndex = new ByteSequenceMap(16, 10, cs -> 7);
+        final ByteSequenceMap poorIndex = new ByteSequenceMap(16, 10, cs -> 7, Long.MIN_VALUE);
 
         final ByteBuffer otherTerm = toBuffer("otherTerm");
         final long otherId = 99L;
@@ -94,16 +94,26 @@ class ByteSequenceMapTest
         assertSearchResult(index, SEARCH_TERM, otherId);
     }
 
-    private void assertSearchResult(final ByteSequenceMap index, final ByteBuffer searchTerm, final long retrievedId)
+    @Test
+    void shouldWrapBuffer()
     {
-        index.search(searchTerm, this::onReceivedId);
-        assertThat(receivedList).named("Expected value %s for term %s", retrievedId, searchTerm)
-                .containsExactly(retrievedId);
+        final int initialSize = 20;
+        final ByteSequenceMap map = new ByteSequenceMap(64, initialSize, Long.MIN_VALUE);
+        final String prefix = "SYM_";
+        for (int i = 0; i < initialSize; i++)
+        {
+            map.insert(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)), i);
+        }
+
+        for (int i = 0; i < initialSize; i++)
+        {
+            assertThat(map.search(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)))).isEqualTo(i);
+        }
     }
 
-    private void onReceivedId(final long id)
+    private void assertSearchResult(final ByteSequenceMap index, final ByteBuffer searchTerm, final long retrievedId)
     {
-        receivedList.add(id);
+        assertThat(index.search(searchTerm)).isEqualTo(retrievedId);
     }
 
     private static ByteBuffer toBuffer(final String term)

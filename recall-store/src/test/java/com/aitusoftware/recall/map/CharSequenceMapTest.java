@@ -114,9 +114,4 @@ class CharSequenceMapTest
     {
         assertThat(index.search(searchTerm)).isEqualTo(retrievedId);
     }
-
-    private void onReceivedId(final long id)
-    {
-        receivedList.add(id);
-    }
 }
