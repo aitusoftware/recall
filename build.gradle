@@ -34,7 +34,7 @@ subprojects {
     }
 
     checkstyle {
-       configFile = new File(rootDir, 'config/checkstyle.xml')
+        configFile = new File(project.rootDir, 'config/checkstyle.xml')
         toolVersion = '8.11'
     }
 
@@ -106,6 +106,8 @@ project(':recall-sbe') {
     }
 }
 
+/*
 project(':recall-annotations') {
 
 }
+*/

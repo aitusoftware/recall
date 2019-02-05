@@ -17,13 +17,12 @@
  */
 package com.aitusoftware.recall.map;
 
-import org.junit.jupiter.api.Test;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.google.common.truth.Truth.assertThat;
+import org.junit.jupiter.api.Test;
 
 class CharSequenceMapTest
 {
@@ -31,7 +30,7 @@ class CharSequenceMapTest
     private static final long ID = 17L;
     private static final int INITIAL_SIZE = 16;
 
-    private final CharSequenceMap index = new CharSequenceMap(16, INITIAL_SIZE);
+    private final CharSequenceMap index = new CharSequenceMap(16, INITIAL_SIZE, Long.MIN_VALUE);
     private final List<Long> receivedList = new ArrayList<>();
 
     @Test
@@ -45,7 +44,7 @@ class CharSequenceMapTest
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        index.search(SEARCH_TERM, this::onReceivedId);
+        index.search(SEARCH_TERM);
 
         assertThat(receivedList).isEmpty();
     }
@@ -53,7 +52,7 @@ class CharSequenceMapTest
     @Test
     void shouldRetrieveMultipleValuesWhenHashesCollide()
     {
-        final CharSequenceMap poorIndex = new CharSequenceMap(16, 10, cs -> 7);
+        final CharSequenceMap poorIndex = new CharSequenceMap(16, 10, cs -> 7, Long.MIN_VALUE);
 
         final String otherTerm = "otherTerm";
         final long otherId = 99L;
@@ -98,32 +97,22 @@ class CharSequenceMapTest
     void shouldWrapBuffer()
     {
         final int initialSize = 20;
-        final CharSequenceMap map = new CharSequenceMap(64, initialSize);
+        final CharSequenceMap map = new CharSequenceMap(64, initialSize, Long.MIN_VALUE);
         final String prefix = "SYM_";
         for (int i = 0; i < initialSize; i++)
         {
             map.insert(prefix + i, i);
         }
 
-        final AtomicInteger count = new AtomicInteger();
         for (int i = 0; i < initialSize; i++)
         {
-            final int expected = i;
-            map.search(prefix + i, value ->
-            {
-                assertThat(value).isEqualTo(expected);
-                count.incrementAndGet();
-            });
+            assertThat(map.search(prefix + i)).isEqualTo(i);
         }
-
-        assertThat(count.get()).isEqualTo(initialSize);
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)
     {
-        index.search(searchTerm, this::onReceivedId);
-        assertThat(receivedList).named("Expected value %s for term %s", retrievedId, searchTerm)
-                .containsExactly(retrievedId);
+        assertThat(index.search(searchTerm)).isEqualTo(retrievedId);
     }
 
     private void onReceivedId(final long id)

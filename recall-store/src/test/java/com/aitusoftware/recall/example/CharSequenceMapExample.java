@@ -17,13 +17,15 @@
  */
 package com.aitusoftware.recall.example;
 
+import static com.google.common.truth.Truth.assertThat;
+
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.aitusoftware.recall.map.CharSequenceMap;
 import com.aitusoftware.recall.store.BufferStore;
 import com.aitusoftware.recall.store.ByteBufferOps;
 import com.aitusoftware.recall.store.SingleTypeStore;
-
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class CharSequenceMapExample
 {
@@ -39,7 +41,7 @@ public class CharSequenceMapExample
         ByteBuffer::allocateDirect, new ByteBufferOps()),
         transcoder, transcoder, Order::getId);
     private final CharSequenceMap orderBySymbol =
-        new CharSequenceMap(MAX_KEY_LENGTH, INITIAL_SIZE);
+        new CharSequenceMap(MAX_KEY_LENGTH, INITIAL_SIZE, Long.MIN_VALUE);
 
     private void execute()
     {
@@ -58,17 +60,10 @@ public class CharSequenceMapExample
         for (int i = 0; i < INITIAL_SIZE; i++)
         {
             final String searchTerm = symbols[i];
-            orderBySymbol.search(searchTerm, id ->
-            {
-                store.load(id, container);
-                matchCount.incrementAndGet();
-                System.out.printf("Order with symbol %s has id %d%n", searchTerm, id);
-            });
-        }
+            final long id = orderBySymbol.search(searchTerm);
 
-        if (matchCount.get() != INITIAL_SIZE)
-        {
-            throw new IllegalStateException();
+            assertThat(store.load(id, container)).isTrue();
+            System.out.printf("Order with symbol %s has id %d%n", searchTerm, id);
         }
     }
 

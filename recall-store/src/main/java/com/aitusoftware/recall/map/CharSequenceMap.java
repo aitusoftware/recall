@@ -17,12 +17,11 @@
  */
 package com.aitusoftware.recall.map;
 
-import org.agrona.BitUtil;
-
 import java.nio.ByteBuffer;
 import java.util.function.IntFunction;
-import java.util.function.LongConsumer;
 import java.util.function.ToIntFunction;
+
+import org.agrona.BitUtil;
 
 /**
  * Map for storing a char-sequence against a <code>long</code> value.
@@ -33,6 +32,7 @@ public final class CharSequenceMap
     private final CharArrayCharSequence charBuffer = new CharArrayCharSequence();
     private final float loadFactor = 0.7f;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
+    private final long missingValue;
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
@@ -47,13 +47,16 @@ public final class CharSequenceMap
      *
      * @param maxKeyLength max length of any key
      * @param initialSize  initial size of the map
+     * @param missingValue value to return if the key is not present
      */
-    public CharSequenceMap(final int maxKeyLength, final int initialSize)
+    public CharSequenceMap(final int maxKeyLength, final int initialSize, final long missingValue)
     {
-        this(maxKeyLength, initialSize, CharSequenceMap::defaultHash);
+        this(maxKeyLength, initialSize, CharSequenceMap::defaultHash, missingValue);
     }
 
-    CharSequenceMap(final int maxKeyLength, final int initialSize, final ToIntFunction<CharSequence> hash)
+    CharSequenceMap(
+        final int maxKeyLength, final int initialSize,
+        final ToIntFunction<CharSequence> hash, final long missingValue)
     {
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         mask = totalEntryCount - 1;
@@ -63,6 +66,7 @@ public final class CharSequenceMap
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         maxCandidateIndex = totalEntryCount * entrySize;
         this.hash = hash;
+        this.missingValue = missingValue;
     }
 
     /**
@@ -106,12 +110,11 @@ public final class CharSequenceMap
      * Searches the map for a given key.
      *
      * @param value      the key to search for
-     * @param idReceiver the callback for a value associated with the key
+     * @return the retrieved value, or {@code missingValue} if it was not present
      */
-    public void search(final CharSequence value, final LongConsumer idReceiver)
+    public long search(final CharSequence value)
     {
         int index = entrySize * (hash.applyAsInt(value) & mask);
-        // TODO implement wrapping, should continue on until entire buffer has been searched
         int entry = 0;
         while (entry < totalEntryCount)
         {
@@ -132,13 +135,14 @@ public final class CharSequenceMap
             }
             if (matches)
             {
-                idReceiver.accept(readId(index, dataBuffer));
-                return;
+                return readId(index, dataBuffer);
             }
 
             index += entrySize;
             entry++;
         }
+
+        return missingValue;
     }
 
     private void insertEntry(final CharSequence value, final long id, final int index)
