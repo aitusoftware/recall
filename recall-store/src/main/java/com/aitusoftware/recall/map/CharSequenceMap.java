@@ -81,6 +81,10 @@ public final class CharSequenceMap
      */
     public void put(final CharSequence value, final long id)
     {
+        if (value.length() > maxKeyLength)
+        {
+            throw new IllegalArgumentException("Key too long");
+        }
         if (liveEntryCount > entryCountToTriggerRehash)
         {
             rehash();

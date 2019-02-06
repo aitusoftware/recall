@@ -19,9 +19,11 @@ package com.aitusoftware.recall.map;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class CharSequenceMapTest
@@ -30,10 +32,22 @@ class CharSequenceMapTest
     private static final long ID = 17L;
     private static final int INITIAL_SIZE = 16;
     private static final long MISSING_VALUE = Long.MIN_VALUE;
+    private static final int MAX_KEY_LENGTH = 64;
 
     private final CharSequenceMap map = new CharSequenceMap(
-        16, INITIAL_SIZE, MISSING_VALUE);
+        MAX_KEY_LENGTH, INITIAL_SIZE, MISSING_VALUE);
     private final List<Long> receivedList = new ArrayList<>();
+
+    @Test
+    void shouldRejectKeyThatIsTooLong()
+    {
+        final StringBuilder key = new StringBuilder();
+        for (int i = 0; i <= MAX_KEY_LENGTH; i++)
+        {
+            key.append('x');
+        }
+        Assertions.assertThrows(IllegalArgumentException.class, () -> map.put(key, 7L));
+    }
 
     @Test
     void shouldStoreSingleValue()
@@ -122,6 +136,56 @@ class CharSequenceMapTest
         assertThat(map.remove(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
         assertThat(map.get(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
         assertThat(map.size()).isEqualTo(0);
+    }
+
+    @Disabled
+    @Test
+    void comparisonTest()
+    {
+        final Map<String, Long> control = new HashMap<>();
+        final Random random = ThreadLocalRandom.current();
+
+        for (int i = 0; i < 10_000; i++)
+        {
+            final String key = UUID.randomUUID().toString();
+            final long value = random.nextLong();
+            control.put(key, value);
+            map.put(key, value);
+        }
+
+        assertThat(map.size()).isEqualTo(10_000);
+
+        Set<String> controlKeys = new HashSet<>(control.keySet());
+        int counter = 0;
+        for (final String controlKey : controlKeys)
+        {
+            if ((counter++ & 7) == 0)
+            {
+                assertThat(map.remove(controlKey)).isEqualTo(control.remove(controlKey));
+            }
+        }
+
+        assertThat(map.size()).isEqualTo(control.size());
+
+        controlKeys = new HashSet<>(control.keySet());
+        for (final String controlKey : controlKeys)
+        {
+            assertThat(map.get(controlKey)).isEqualTo(control.get(controlKey));
+        }
+
+        for (int i = 0; i < 10_000; i++)
+        {
+            final String key = UUID.randomUUID().toString();
+            final long value = random.nextLong();
+            control.put(key, value);
+            map.put(key, value);
+        }
+
+        controlKeys = new HashSet<>(control.keySet());
+        for (final String controlKey : controlKeys)
+        {
+            assertThat(map.get(controlKey)).isEqualTo(control.get(controlKey));
+        }
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)

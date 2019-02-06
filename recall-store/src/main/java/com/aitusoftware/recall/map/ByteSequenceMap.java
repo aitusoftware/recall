@@ -82,6 +82,10 @@ public final class ByteSequenceMap
      */
     public void put(final ByteBuffer value, final long id)
     {
+        if (value.remaining() > maxKeyLength)
+        {
+            throw new IllegalArgumentException("Key too long");
+        }
         if (liveEntryCount > entryCountToTriggerRehash)
         {
             rehash();

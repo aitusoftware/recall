@@ -27,3 +27,4 @@ hs_err_pid*
 .idea/
 todo.txt
 recall-sbe/out
+recall-store/out
