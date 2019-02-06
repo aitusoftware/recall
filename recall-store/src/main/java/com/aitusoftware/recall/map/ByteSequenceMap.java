@@ -36,6 +36,7 @@ public final class ByteSequenceMap
     private final float loadFactor = 0.7f;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
     private final long missingValue;
+    private final int maxKeyLength;
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
@@ -43,6 +44,8 @@ public final class ByteSequenceMap
     private int mask;
     private int entrySize;
     private int endOfBuffer;
+    private final EntryHandler getEntryHandler = (b, i) -> {};
+    private final EntryHandler removeEntryHandler = new RemoveEntryHandler();
 
     /**
      * Constructor for the map.
@@ -68,6 +71,7 @@ public final class ByteSequenceMap
         endOfBuffer = totalEntryCount * entrySize;
         this.hash = hash;
         this.missingValue = missingValue;
+        this.maxKeyLength = maxKeyLength;
     }
 
     /**
@@ -115,6 +119,32 @@ public final class ByteSequenceMap
      */
     public long get(final ByteBuffer value)
     {
+        return search(value, getEntryHandler);
+    }
+
+    /**
+     * Removes an entry for a given key.
+     *
+     * @param value the key to search for
+     * @return the stored value, or {@code missingValue} if the key was not present
+     */
+    public long remove(final ByteBuffer value)
+    {
+        return search(value, removeEntryHandler);
+    }
+
+    /**
+     * Returns the number of entries in the map.
+     *
+     * @return the number of entries
+     */
+    public int size()
+    {
+        return liveEntryCount;
+    }
+
+    private long search(final ByteBuffer value, final EntryHandler entryHandler)
+    {
         int index = entrySize * (hash.applyAsInt(value) & mask);
         int entry = 0;
         while (entry < totalEntryCount)
@@ -136,13 +166,20 @@ public final class ByteSequenceMap
             }
             if (matches)
             {
-                return dataBuffer.getLong((index + ID_OFFSET) % dataBuffer.capacity());
+                final long storedId = dataBuffer.getLong((index + ID_OFFSET) % dataBuffer.capacity());
+                entryHandler.onEntryFound(dataBuffer, index);
+                return storedId;
             }
             index += entrySize;
             entry++;
         }
 
         return missingValue;
+    }
+
+    private interface EntryHandler
+    {
+        void onEntryFound(ByteBuffer dataBuffer, int index);
     }
 
     private void insertEntry(final ByteBuffer value, final long id, final int offset)
@@ -212,5 +249,22 @@ public final class ByteSequenceMap
             hash = (31 * hash) + value.get(i);
         }
         return hash;
+    }
+
+    private class RemoveEntryHandler implements EntryHandler
+    {
+        @Override
+        public void onEntryFound(final ByteBuffer dataBuffer, final int index)
+        {
+            dataBuffer.putLong(index, 0);
+            dataBuffer.putInt(index + LENGTH_OFFSET, 0);
+            dataBuffer.put(index + USED_INDICATOR_OFFSET, (byte)1);
+            final int endOfData = maxKeyLength + index + DATA_OFFSET;
+            for (int i = index + DATA_OFFSET; i < endOfData; i++)
+            {
+                dataBuffer.put(i, (byte)0);
+            }
+            liveEntryCount--;
+        }
     }
 }

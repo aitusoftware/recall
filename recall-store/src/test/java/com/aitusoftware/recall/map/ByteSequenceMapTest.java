@@ -31,21 +31,22 @@ class ByteSequenceMapTest
     private static final ByteBuffer SEARCH_TERM = toBuffer("searchTerm");
     private static final long ID = 17L;
     private static final int INITIAL_SIZE = 16;
-    private final ByteSequenceMap index = new ByteSequenceMap(16, INITIAL_SIZE, Long.MIN_VALUE);
+    private static final long MISSING_VALUE = Long.MIN_VALUE;
+    private final ByteSequenceMap map = new ByteSequenceMap(16, INITIAL_SIZE, MISSING_VALUE);
     private final List<Long> receivedList = new ArrayList<>();
 
     @Test
     void shouldStoreSingleValue()
     {
-        index.put(SEARCH_TERM, ID);
+        map.put(SEARCH_TERM, ID);
 
-        assertSearchResult(index, SEARCH_TERM, ID);
+        assertSearchResult(map, SEARCH_TERM, ID);
     }
 
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        index.get(SEARCH_TERM);
+        map.get(SEARCH_TERM);
 
         assertThat(receivedList).isEmpty();
     }
@@ -74,13 +75,13 @@ class ByteSequenceMapTest
         final int doubleInitialSize = INITIAL_SIZE * 2;
         for (int i = 0; i < doubleInitialSize; i++)
         {
-            index.put(toBuffer("searchTerm_" + i), i);
+            map.put(toBuffer("searchTerm_" + i), i);
         }
 
         for (int i = 0; i < doubleInitialSize; i++)
         {
             receivedList.clear();
-            assertSearchResult(index, toBuffer("searchTerm_" + i), i);
+            assertSearchResult(map, toBuffer("searchTerm_" + i), i);
         }
     }
 
@@ -88,10 +89,10 @@ class ByteSequenceMapTest
     void shouldReplaceExistingValue()
     {
         final long otherId = 42L;
-        index.put(SEARCH_TERM, ID);
-        index.put(SEARCH_TERM, otherId);
+        map.put(SEARCH_TERM, ID);
+        map.put(SEARCH_TERM, otherId);
 
-        assertSearchResult(index, SEARCH_TERM, otherId);
+        assertSearchResult(map, SEARCH_TERM, otherId);
     }
 
     @Test
@@ -109,6 +110,17 @@ class ByteSequenceMapTest
         {
             assertThat(map.get(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)))).isEqualTo(i);
         }
+    }
+
+    @Test
+    void shouldRemoveValue()
+    {
+        map.put(SEARCH_TERM, ID);
+
+        assertThat(map.remove(SEARCH_TERM)).isEqualTo(ID);
+        assertThat(map.remove(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
+        assertThat(map.get(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
+        assertThat(map.size()).isEqualTo(0);
     }
 
     private void assertSearchResult(final ByteSequenceMap index, final ByteBuffer searchTerm, final long retrievedId)
