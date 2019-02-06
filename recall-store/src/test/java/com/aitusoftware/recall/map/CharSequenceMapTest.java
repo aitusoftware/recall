@@ -29,22 +29,24 @@ class CharSequenceMapTest
     private static final String SEARCH_TERM = "searchTerm";
     private static final long ID = 17L;
     private static final int INITIAL_SIZE = 16;
+    private static final long MISSING_VALUE = Long.MIN_VALUE;
 
-    private final CharSequenceMap index = new CharSequenceMap(16, INITIAL_SIZE, Long.MIN_VALUE);
+    private final CharSequenceMap map = new CharSequenceMap(
+        16, INITIAL_SIZE, MISSING_VALUE);
     private final List<Long> receivedList = new ArrayList<>();
 
     @Test
     void shouldStoreSingleValue()
     {
-        index.put(SEARCH_TERM, ID);
+        map.put(SEARCH_TERM, ID);
 
-        assertSearchResult(index, SEARCH_TERM, ID);
+        assertSearchResult(map, SEARCH_TERM, ID);
     }
 
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        index.get(SEARCH_TERM);
+        map.get(SEARCH_TERM);
 
         assertThat(receivedList).isEmpty();
     }
@@ -73,13 +75,14 @@ class CharSequenceMapTest
         final int doubleInitialSize = INITIAL_SIZE * 2;
         for (int i = 0; i < doubleInitialSize; i++)
         {
-            index.put("searchTerm_" + i, i);
+            map.put("searchTerm_" + i, i);
+            assertThat(map.size()).isEqualTo(i + 1);
         }
 
         for (int i = 0; i < doubleInitialSize; i++)
         {
             receivedList.clear();
-            assertSearchResult(index, "searchTerm_" + i, i);
+            assertSearchResult(map, "searchTerm_" + i, i);
         }
     }
 
@@ -87,10 +90,10 @@ class CharSequenceMapTest
     void shouldReplaceExistingValue()
     {
         final long otherId = 42L;
-        index.put(SEARCH_TERM, ID);
-        index.put(SEARCH_TERM, otherId);
+        map.put(SEARCH_TERM, ID);
+        map.put(SEARCH_TERM, otherId);
 
-        assertSearchResult(index, SEARCH_TERM, otherId);
+        assertSearchResult(map, SEARCH_TERM, otherId);
     }
 
     @Test
@@ -108,6 +111,17 @@ class CharSequenceMapTest
         {
             assertThat(map.get(prefix + i)).isEqualTo(i);
         }
+    }
+
+    @Test
+    void shouldRemoveValue()
+    {
+        map.put(SEARCH_TERM, ID);
+
+        assertThat(map.remove(SEARCH_TERM)).isEqualTo(ID);
+        assertThat(map.remove(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
+        assertThat(map.get(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
+        assertThat(map.size()).isEqualTo(0);
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)

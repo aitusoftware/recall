@@ -17,11 +17,11 @@
  */
 package com.aitusoftware.recall.map;
 
+import org.agrona.BitUtil;
+
 import java.nio.ByteBuffer;
 import java.util.function.IntFunction;
 import java.util.function.ToIntFunction;
-
-import org.agrona.BitUtil;
 
 /**
  * Map for storing a char-sequence against a <code>long</code> value.
@@ -33,6 +33,8 @@ public final class CharSequenceMap
     private final float loadFactor = 0.7f;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
     private final long missingValue;
+    private final int maxKeyLength;
+    private final RemoveEntryHandler removeEntryHandler = new RemoveEntryHandler();
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
@@ -41,6 +43,7 @@ public final class CharSequenceMap
     private int entrySize;
     private int idOffset;
     private int maxCandidateIndex;
+    private final EntryHandler searchEntryHandler = (b, i) -> {};
 
     /**
      * Constructor for the map.
@@ -65,6 +68,7 @@ public final class CharSequenceMap
         dataBuffer = bufferFactory.apply(((maxKeyLength + 3) * Integer.BYTES) * totalEntryCount);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         maxCandidateIndex = totalEntryCount * entrySize;
+        this.maxKeyLength = maxKeyLength;
         this.hash = hash;
         this.missingValue = missingValue;
     }
@@ -109,40 +113,33 @@ public final class CharSequenceMap
     /**
      * Searches the map for a given key.
      *
-     * @param value      the key to get for
+     * @param value the key to search for
      * @return the retrieved value, or {@code missingValue} if it was not present
      */
     public long get(final CharSequence value)
     {
-        int index = entrySize * (hash.applyAsInt(value) & mask);
-        int entry = 0;
-        while (entry < totalEntryCount)
-        {
-            if (dataBuffer.getInt((index * Integer.BYTES) % dataBuffer.capacity()) == 0)
-            {
-                break;
-            }
+        return search(value, searchEntryHandler);
+    }
 
-            boolean matches = true;
+    /**
+     * Removes an entry for a given key.
+     *
+     * @param value the key to search for
+     * @return the stored value, or {@code missingValue} if the key was not present
+     */
+    public long remove(final CharSequence value)
+    {
+        return search(value, removeEntryHandler);
+    }
 
-            for (int i = 0; i < value.length(); i++)
-            {
-                if (dataBuffer.getInt(((dataOffset(index) + i) * Integer.BYTES) %
-                    dataBuffer.capacity()) != value.charAt(i))
-                {
-                    matches = false;
-                }
-            }
-            if (matches)
-            {
-                return readId(index, dataBuffer);
-            }
-
-            index += entrySize;
-            entry++;
-        }
-
-        return missingValue;
+    /**
+     * Returns the number of entries in the map.
+     *
+     * @return the number of entries
+     */
+    public int size()
+    {
+        return liveEntryCount;
     }
 
     private void insertEntry(final CharSequence value, final long id, final int index)
@@ -181,6 +178,46 @@ public final class CharSequenceMap
                 put(charBuffer, id);
             }
         }
+    }
+
+    private long search(final CharSequence value, final EntryHandler entryHandler)
+    {
+        int index = entrySize * (hash.applyAsInt(value) & mask);
+        int entry = 0;
+        while (entry < totalEntryCount)
+        {
+            if (dataBuffer.getInt((index * Integer.BYTES) % dataBuffer.capacity()) == 0)
+            {
+                break;
+            }
+
+            boolean matches = true;
+
+            for (int i = 0; i < value.length(); i++)
+            {
+                if (dataBuffer.getInt(((dataOffset(index) + i) * Integer.BYTES) %
+                    dataBuffer.capacity()) != value.charAt(i))
+                {
+                    matches = false;
+                }
+            }
+            if (matches)
+            {
+                final long storedId = readId(index, dataBuffer);
+                entryHandler.onEntryFound(dataBuffer, index);
+                return storedId;
+            }
+
+            index += entrySize;
+            entry++;
+        }
+
+        return missingValue;
+    }
+
+    private interface EntryHandler
+    {
+        void onEntryFound(ByteBuffer dataBuffer, int index);
     }
 
     private void writeId(final long id, final int index)
@@ -271,6 +308,24 @@ public final class CharSequenceMap
                 builder.append(charAt(i));
             }
             return builder.toString();
+        }
+    }
+
+    private class RemoveEntryHandler implements EntryHandler
+    {
+        @Override
+        public void onEntryFound(final ByteBuffer buffer, final int index)
+        {
+            final int byteOffset = index * Integer.BYTES;
+            buffer.putInt(byteOffset, 0);
+            buffer.putInt(lengthOffset(index) * Integer.BYTES, 0);
+            for (int i = 0; i < maxKeyLength; i++)
+            {
+                buffer.putInt(byteOffset + (2 * Integer.BYTES) + (i * Integer.BYTES), 0);
+            }
+
+            CharSequenceMap.this.writeId(0, index);
+            liveEntryCount--;
         }
     }
 }
