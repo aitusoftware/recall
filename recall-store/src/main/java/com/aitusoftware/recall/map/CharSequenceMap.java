@@ -75,7 +75,7 @@ public final class CharSequenceMap
      * @param value value to use as a key
      * @param id    id to store
      */
-    public void insert(final CharSequence value, final long id)
+    public void put(final CharSequence value, final long id)
     {
         if (liveEntryCount > entryCountToTriggerRehash)
         {
@@ -102,17 +102,17 @@ public final class CharSequenceMap
                 }
             }
 
-            insert(value, id);
+            put(value, id);
         }
     }
 
     /**
      * Searches the map for a given key.
      *
-     * @param value      the key to search for
+     * @param value      the key to get for
      * @return the retrieved value, or {@code missingValue} if it was not present
      */
-    public long search(final CharSequence value)
+    public long get(final CharSequence value)
     {
         int index = entrySize * (hash.applyAsInt(value) & mask);
         int entry = 0;
@@ -178,7 +178,7 @@ public final class CharSequenceMap
             {
                 final long id = readId(index, oldBuffer);
                 charBuffer.reset(oldBuffer, dataOffset(index), oldBuffer.getInt(lengthOffset(index) * Integer.BYTES));
-                insert(charBuffer, id);
+                put(charBuffer, id);
             }
         }
     }

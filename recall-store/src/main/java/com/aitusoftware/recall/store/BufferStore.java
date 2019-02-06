@@ -208,8 +208,6 @@ public final class BufferStore<B> implements Store<B>
 
     /**
      * {@inheritDoc}
-     *
-     * @param output
      */
     @Override
     public void writeTo(final FileChannel output)

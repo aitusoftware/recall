@@ -36,7 +36,7 @@ class CharSequenceMapTest
     @Test
     void shouldStoreSingleValue()
     {
-        index.insert(SEARCH_TERM, ID);
+        index.put(SEARCH_TERM, ID);
 
         assertSearchResult(index, SEARCH_TERM, ID);
     }
@@ -44,7 +44,7 @@ class CharSequenceMapTest
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        index.search(SEARCH_TERM);
+        index.get(SEARCH_TERM);
 
         assertThat(receivedList).isEmpty();
     }
@@ -57,8 +57,8 @@ class CharSequenceMapTest
         final String otherTerm = "otherTerm";
         final long otherId = 99L;
 
-        poorIndex.insert(SEARCH_TERM, ID);
-        poorIndex.insert(otherTerm, otherId);
+        poorIndex.put(SEARCH_TERM, ID);
+        poorIndex.put(otherTerm, otherId);
 
         assertSearchResult(poorIndex, SEARCH_TERM, ID);
 
@@ -73,7 +73,7 @@ class CharSequenceMapTest
         final int doubleInitialSize = INITIAL_SIZE * 2;
         for (int i = 0; i < doubleInitialSize; i++)
         {
-            index.insert("searchTerm_" + i, i);
+            index.put("searchTerm_" + i, i);
         }
 
         for (int i = 0; i < doubleInitialSize; i++)
@@ -87,8 +87,8 @@ class CharSequenceMapTest
     void shouldReplaceExistingValue()
     {
         final long otherId = 42L;
-        index.insert(SEARCH_TERM, ID);
-        index.insert(SEARCH_TERM, otherId);
+        index.put(SEARCH_TERM, ID);
+        index.put(SEARCH_TERM, otherId);
 
         assertSearchResult(index, SEARCH_TERM, otherId);
     }
@@ -101,17 +101,17 @@ class CharSequenceMapTest
         final String prefix = "SYM_";
         for (int i = 0; i < initialSize; i++)
         {
-            map.insert(prefix + i, i);
+            map.put(prefix + i, i);
         }
 
         for (int i = 0; i < initialSize; i++)
         {
-            assertThat(map.search(prefix + i)).isEqualTo(i);
+            assertThat(map.get(prefix + i)).isEqualTo(i);
         }
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)
     {
-        assertThat(index.search(searchTerm)).isEqualTo(retrievedId);
+        assertThat(index.get(searchTerm)).isEqualTo(retrievedId);
     }
 }

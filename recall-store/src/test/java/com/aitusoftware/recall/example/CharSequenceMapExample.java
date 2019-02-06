@@ -51,7 +51,7 @@ public class CharSequenceMapExample
             final Order order = Order.of(i);
 
             store.store(order);
-            orderBySymbol.insert(order.getSymbol(), order.getId());
+            orderBySymbol.put(order.getSymbol(), order.getId());
             symbols[i] = order.getSymbol().toString();
         }
 
@@ -60,7 +60,7 @@ public class CharSequenceMapExample
         for (int i = 0; i < INITIAL_SIZE; i++)
         {
             final String searchTerm = symbols[i];
-            final long id = orderBySymbol.search(searchTerm);
+            final long id = orderBySymbol.get(searchTerm);
 
             assertThat(store.load(id, container)).isTrue();
             System.out.printf("Order with symbol %s has id %d%n", searchTerm, id);

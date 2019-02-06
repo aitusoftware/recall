@@ -37,7 +37,7 @@ class ByteSequenceMapTest
     @Test
     void shouldStoreSingleValue()
     {
-        index.insert(SEARCH_TERM, ID);
+        index.put(SEARCH_TERM, ID);
 
         assertSearchResult(index, SEARCH_TERM, ID);
     }
@@ -45,7 +45,7 @@ class ByteSequenceMapTest
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        index.search(SEARCH_TERM);
+        index.get(SEARCH_TERM);
 
         assertThat(receivedList).isEmpty();
     }
@@ -58,8 +58,8 @@ class ByteSequenceMapTest
         final ByteBuffer otherTerm = toBuffer("otherTerm");
         final long otherId = 99L;
 
-        poorIndex.insert(SEARCH_TERM, ID);
-        poorIndex.insert(otherTerm, otherId);
+        poorIndex.put(SEARCH_TERM, ID);
+        poorIndex.put(otherTerm, otherId);
 
         assertSearchResult(poorIndex, SEARCH_TERM, ID);
 
@@ -74,7 +74,7 @@ class ByteSequenceMapTest
         final int doubleInitialSize = INITIAL_SIZE * 2;
         for (int i = 0; i < doubleInitialSize; i++)
         {
-            index.insert(toBuffer("searchTerm_" + i), i);
+            index.put(toBuffer("searchTerm_" + i), i);
         }
 
         for (int i = 0; i < doubleInitialSize; i++)
@@ -88,8 +88,8 @@ class ByteSequenceMapTest
     void shouldReplaceExistingValue()
     {
         final long otherId = 42L;
-        index.insert(SEARCH_TERM, ID);
-        index.insert(SEARCH_TERM, otherId);
+        index.put(SEARCH_TERM, ID);
+        index.put(SEARCH_TERM, otherId);
 
         assertSearchResult(index, SEARCH_TERM, otherId);
     }
@@ -102,18 +102,18 @@ class ByteSequenceMapTest
         final String prefix = "SYM_";
         for (int i = 0; i < initialSize; i++)
         {
-            map.insert(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)), i);
+            map.put(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)), i);
         }
 
         for (int i = 0; i < initialSize; i++)
         {
-            assertThat(map.search(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)))).isEqualTo(i);
+            assertThat(map.get(ByteBuffer.wrap((prefix + i).getBytes(StandardCharsets.UTF_8)))).isEqualTo(i);
         }
     }
 
     private void assertSearchResult(final ByteSequenceMap index, final ByteBuffer searchTerm, final long retrievedId)
     {
-        assertThat(index.search(searchTerm)).isEqualTo(retrievedId);
+        assertThat(index.get(searchTerm)).isEqualTo(retrievedId);
     }
 
     private static ByteBuffer toBuffer(final String term)
