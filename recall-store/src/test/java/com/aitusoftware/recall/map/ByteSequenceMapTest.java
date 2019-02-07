@@ -139,7 +139,8 @@ class ByteSequenceMapTest
     void comparisonTest()
     {
         final Map<String, Long> control = new HashMap<>();
-        final Random random = new Random(98237493284723L);
+        final long seed = System.nanoTime();
+        final Random random = new Random(seed);
 
         for (int i = 0; i < 10_000; i++)
         {
@@ -148,7 +149,7 @@ class ByteSequenceMapTest
             control.put(key, value);
             map.put(toBuffer(key), value);
 
-            assertThat(map.get(toBuffer(key))).isEqualTo(control.get(key));
+            assertThat(map.get(toBuffer(key))).named("seed: %d", seed).isEqualTo(control.get(key));
         }
 
         assertThat(map.size()).isEqualTo(10_000);
@@ -159,7 +160,8 @@ class ByteSequenceMapTest
         {
             if ((counter++ & 7) == 0)
             {
-                assertThat(map.remove(toBuffer(controlKey))).isEqualTo(control.remove(controlKey));
+                assertThat(map.remove(toBuffer(controlKey)))
+                    .named("seed: %d", seed).isEqualTo(control.remove(controlKey));
             }
         }
 
@@ -168,7 +170,7 @@ class ByteSequenceMapTest
         controlKeys = new HashSet<>(control.keySet());
         for (final String controlKey : controlKeys)
         {
-            assertThat(map.get(toBuffer(controlKey))).isEqualTo(control.get(controlKey));
+            assertThat(map.get(toBuffer(controlKey))).named("seed: %d", seed).isEqualTo(control.get(controlKey));
         }
 
         for (int i = 0; i < 10_000; i++)
@@ -182,7 +184,7 @@ class ByteSequenceMapTest
         controlKeys = new HashSet<>(control.keySet());
         for (final String controlKey : controlKeys)
         {
-            assertThat(map.get(toBuffer(controlKey))).isEqualTo(control.get(controlKey));
+            assertThat(map.get(toBuffer(controlKey))).named("seed: %d", seed).isEqualTo(control.get(controlKey));
         }
 
         map.rehash();
