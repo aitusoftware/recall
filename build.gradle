@@ -2,8 +2,52 @@ plugins {
     id 'net.minecrell.licenser' version '0.4.1' apply false
     id 'me.champeau.gradle.jmh' version '0.4.8' apply false
 }
-
+apply plugin: 'java'
 def recallVersion = file('version.txt').text.trim()
+group = 'com.aitusoftware'
+
+ext {
+    fullName = 'Recall'
+    fullDescription = 'Recall: An off-heap garbage-free object store'
+    teamName = 'Aitu Software Limited'
+    siteUrl = 'https://github.com/aitusoftware/recall'
+    sourceUrl = 'https://github.com/aitusoftware/recall.git'
+
+    javaCompilerExecutable = System.env['JAVA_HOME'] ? System.env['JAVA_HOME'] + '/bin/javac' : 'javac'
+    if (!project.hasProperty('sonatypeUrl')) sonatypeUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+    if (!project.hasProperty('sonatypeUsername')) sonatypeUsername = ''
+    if (!project.hasProperty('sonatypePassword')) sonatypePassword = ''
+}
+
+def projectPom = {
+    name = fullName
+    description = fullDescription
+    url = siteUrl
+    packaging = 'pom'
+
+    scm {
+        url = "$sourceUrl"
+        connection = "scm:git:https://github.com/aitusoftware.com/recall.git"
+        developerConnection = "scm:git:https://github.com/aitusoftware.com/recall.git"
+    }
+
+    licenses {
+        license {
+            name = 'The Apache Software License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
+        }
+    }
+
+    developers {
+        developer {
+            id = 'epickrram'
+            name = 'Mark Price'
+            email = 'recall@aitusoftware.com'
+        }
+    }
+}
+
 
 subprojects {
     repositories {
@@ -11,20 +55,32 @@ subprojects {
         jcenter()
     }
 
+    group = 'com.aitusoftware'
+
+    jar {
+        baseName = project.name
+
+        manifest.attributes('Built-By': System.properties['user.name'],
+                'Bundle-Name': fullName,
+                'Bundle-Vendor': teamName,
+                'Bundle-Description': fullDescription,
+                'Bundle-DocURL': siteUrl)
+    }
 }
 
 subprojects {
     version = recallVersion
 
     apply plugin: 'java-library'
+    apply plugin: 'java'
     apply plugin: 'checkstyle'
+    apply plugin: 'signing'
+    apply plugin: 'maven'
     apply plugin: 'net.minecrell.licenser'
 
     test {
         useJUnitPlatform()
     }
-
-
 
     dependencies {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.11'
@@ -58,6 +114,11 @@ subprojects {
 
     javadoc {
     }
+
+    signing {
+        required { gradle.taskGraph.hasTask('uploadArchives') }
+        sign configurations.archives
+    }
 }
 
 
@@ -80,6 +141,18 @@ project(':recall-store') {
         duplicateClassesStrategy = 'warn'
         jvmArgs = ['-Dagrona.disable.bounds.checks=true']
         profilers = ['gc']
+    }
+
+    uploadArchives {
+        repositories.mavenDeployer {
+            beforeDeployment { deployment -> signing.signPom(deployment) }
+
+            repository(url: sonatypeUrl) {
+                authentication(userName: sonatypeUsername, password: sonatypePassword)
+            }
+
+            pom.project(projectPom)
+        }
     }
 }
 
@@ -104,6 +177,19 @@ project(':recall-sbe') {
         jvmArgs = ["-Dsbe.output.dir=${generatedSrcDir.getAbsolutePath()}", '-Dsbe.generate.ir=true', '-Dsbe.java.generate.interfaces=true']
         args "${project.projectDir}/src/test/resources/sbe-schema.xml"
     }
+
+    uploadArchives {
+        repositories.mavenDeployer {
+            beforeDeployment { deployment -> signing.signPom(deployment) }
+
+            repository(url: sonatypeUrl) {
+                authentication(userName: sonatypeUsername, password: sonatypePassword)
+            }
+
+            pom.project(projectPom)
+        }
+    }
+
 }
 
 /*
