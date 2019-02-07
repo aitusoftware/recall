@@ -150,20 +150,20 @@ public final class ByteSequenceMap
 
     private long search(final ByteBuffer value, final EntryHandler entryHandler)
     {
-        int index = entrySize * (hash.applyAsInt(value) & mask);
+        int entryIndex = entrySize * (hash.applyAsInt(value) & mask);
         int entry = 0;
         while (entry < totalEntryCount)
         {
-            if (dataBuffer.get((index + USED_INDICATOR_OFFSET) % dataBuffer.capacity()) == 0 && noDeletes)
+            if (dataBuffer.get((entryIndex + USED_INDICATOR_OFFSET) % dataBuffer.capacity()) == 0 && noDeletes)
             {
                 break;
             }
 
             boolean matches = true;
-            final int endOfData = value.remaining() + index + DATA_OFFSET;
-            for (int i = index + DATA_OFFSET; i < endOfData; i++)
+            final int endOfData = value.remaining() + entryIndex + DATA_OFFSET;
+            for (int i = entryIndex + DATA_OFFSET; i < endOfData; i++)
             {
-                if (dataBuffer.get(i % dataBuffer.capacity()) != value.get((i - index - DATA_OFFSET)))
+                if (dataBuffer.get(i % dataBuffer.capacity()) != value.get((i - entryIndex - DATA_OFFSET)))
                 {
                     matches = false;
                     break;
@@ -171,11 +171,11 @@ public final class ByteSequenceMap
             }
             if (matches)
             {
-                final long storedId = dataBuffer.getLong((index + ID_OFFSET) % dataBuffer.capacity());
-                entryHandler.onEntryFound(dataBuffer, index);
+                final long storedId = dataBuffer.getLong((entryIndex + ID_OFFSET) % dataBuffer.capacity());
+                entryHandler.onEntryFound(dataBuffer, entryIndex);
                 return storedId;
             }
-            index += entrySize;
+            entryIndex += entrySize;
             entry++;
         }
 

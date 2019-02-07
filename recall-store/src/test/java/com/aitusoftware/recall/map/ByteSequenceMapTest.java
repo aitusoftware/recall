@@ -17,16 +17,14 @@
  */
 package com.aitusoftware.recall.map;
 
-import static com.google.common.truth.Truth.assertThat;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import static com.google.common.truth.Truth.assertThat;
 
 class ByteSequenceMapTest
 {
@@ -137,19 +135,20 @@ class ByteSequenceMapTest
         assertThat(map.size()).isEqualTo(0);
     }
 
-    @Disabled
     @Test
     void comparisonTest()
     {
         final Map<String, Long> control = new HashMap<>();
-        final Random random = ThreadLocalRandom.current();
+        final Random random = new Random(98237493284723L);
 
         for (int i = 0; i < 10_000; i++)
         {
-            final String key = UUID.randomUUID().toString();
+            final String key = new UUID(random.nextLong(), random.nextLong()).toString();
             final long value = random.nextLong();
             control.put(key, value);
             map.put(toBuffer(key), value);
+
+            assertThat(map.get(toBuffer(key))).isEqualTo(control.get(key));
         }
 
         assertThat(map.size()).isEqualTo(10_000);
