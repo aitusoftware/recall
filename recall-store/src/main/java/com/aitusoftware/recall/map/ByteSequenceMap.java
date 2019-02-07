@@ -83,7 +83,7 @@ public final class ByteSequenceMap
         }
         if (liveEntryCount > entryCountToTriggerRehash)
         {
-            rehash();
+            rehash(true);
         }
         final int entryIndex = (hash.applyAsInt(value) & entryMask);
         if (isIndexPositionForValue(value, entryIndex))
@@ -142,6 +142,14 @@ public final class ByteSequenceMap
         return liveEntryCount;
     }
 
+    /**
+     * Allocates a new buffer of the same size, and copies existing entries into it.
+     */
+    public void rehash()
+    {
+        rehash(false);
+    }
+
     private long search(final ByteBuffer value, final EntryHandler entryHandler)
     {
         int entryIndex = (hash.applyAsInt(value) & entryMask);
@@ -182,15 +190,22 @@ public final class ByteSequenceMap
         void onEntryFound(ByteBuffer dataBuffer, int index);
     }
 
-    private void rehash()
+    private void rehash(final boolean shouldResize)
     {
         final ByteBuffer oldBuffer = dataBuffer;
         final int oldEntryCount = totalEntryCount;
+        if (shouldResize)
+        {
+            dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
+            totalEntryCount *= 2;
+            entryMask = totalEntryCount - 1;
+            entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
+        }
+        else
+        {
+            dataBuffer = bufferFactory.apply(oldBuffer.capacity());
+        }
 
-        dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
-        totalEntryCount *= 2;
-        entryMask = totalEntryCount - 1;
-        entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         liveEntryCount = 0;
 
         for (int i = 0; i < oldEntryCount; i++)

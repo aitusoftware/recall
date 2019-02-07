@@ -180,6 +180,13 @@ class CharSequenceMapTest
         {
             assertThat(map.get(controlKey)).isEqualTo(control.get(controlKey));
         }
+
+        map.rehash();
+
+        for (final String controlKey : controlKeys)
+        {
+            assertThat(map.get(controlKey)).isEqualTo(control.get(controlKey));
+        }
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)

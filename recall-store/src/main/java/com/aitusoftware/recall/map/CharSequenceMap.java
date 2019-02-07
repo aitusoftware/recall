@@ -89,7 +89,7 @@ public final class CharSequenceMap
         }
         if (liveEntryCount > entryCountToTriggerRehash)
         {
-            rehash();
+            rehash(true);
         }
         final int entryIndex = (hash.applyAsInt(value) & entryMask);
 
@@ -150,6 +150,14 @@ public final class CharSequenceMap
         return liveEntryCount;
     }
 
+    /**
+     * Allocates a new buffer and copies existing entries to it.
+     */
+    public void rehash()
+    {
+        rehash(false);
+    }
+
     private void insertEntry(final CharSequence value, final long id, final int entryIndex)
     {
         setValueLength(entryIndex, value.length(), dataBuffer);
@@ -162,15 +170,23 @@ public final class CharSequenceMap
         liveEntryCount++;
     }
 
-    private void rehash()
+    private void rehash(final boolean shouldResize)
     {
         final ByteBuffer oldBuffer = dataBuffer;
         final int oldEntryCount = totalEntryCount;
 
-        dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
-        totalEntryCount *= 2;
-        entryMask = totalEntryCount - 1;
-        entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
+        if (shouldResize)
+        {
+            dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
+            totalEntryCount *= 2;
+            entryMask = totalEntryCount - 1;
+            entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
+        }
+        else
+        {
+            dataBuffer = bufferFactory.apply(oldBuffer.capacity());
+        }
+
         liveEntryCount = 0;
 
         for (int i = 0; i < oldEntryCount; i++)

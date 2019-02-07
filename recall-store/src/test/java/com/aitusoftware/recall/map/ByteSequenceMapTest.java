@@ -184,6 +184,13 @@ class ByteSequenceMapTest
         {
             assertThat(map.get(toBuffer(controlKey))).isEqualTo(control.get(controlKey));
         }
+
+        map.rehash();
+
+        for (final String controlKey : controlKeys)
+        {
+            assertThat(map.get(toBuffer(controlKey))).isEqualTo(control.get(controlKey));
+        }
     }
 
 
