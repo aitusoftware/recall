@@ -164,7 +164,6 @@ public final class CharSequenceMap
 
     private void rehash()
     {
-        System.out.println("Rehash");
         final ByteBuffer oldBuffer = dataBuffer;
         final int oldEntryCount = totalEntryCount;
 
@@ -215,10 +214,7 @@ public final class CharSequenceMap
             }
 
             entryIndex++;
-            if (entryIndex == totalEntryCount)
-            {
-                entryIndex = 0;
-            }
+            entryIndex = entryIndex & entryMask;
             entry++;
         }
 

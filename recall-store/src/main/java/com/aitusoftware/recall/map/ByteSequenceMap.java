@@ -46,6 +46,7 @@ public final class ByteSequenceMap
     private int mask;
     private int entrySize;
     private int endOfBuffer;
+    private boolean noDeletes = true;
 
     /**
      * Constructor for the map.
@@ -153,7 +154,7 @@ public final class ByteSequenceMap
         int entry = 0;
         while (entry < totalEntryCount)
         {
-            if (dataBuffer.get((index + USED_INDICATOR_OFFSET) % dataBuffer.capacity()) == 0)
+            if (dataBuffer.get((index + USED_INDICATOR_OFFSET) % dataBuffer.capacity()) == 0 && noDeletes)
             {
                 break;
             }
@@ -269,6 +270,7 @@ public final class ByteSequenceMap
                 dataBuffer.put(i, (byte)0);
             }
             liveEntryCount--;
+            noDeletes = false;
         }
     }
 }
