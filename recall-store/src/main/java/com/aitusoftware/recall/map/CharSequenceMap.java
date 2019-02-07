@@ -35,15 +35,14 @@ public final class CharSequenceMap
     private final long missingValue;
     private final int maxKeyLength;
     private final RemoveEntryHandler removeEntryHandler = new RemoveEntryHandler();
+    private final EntryHandler searchEntryHandler = (b, i) -> {};
+    private final int entrySizeInBytes;
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
     private int entryCountToTriggerRehash;
-    private int mask;
-    private int entrySize;
-    private int idOffset;
-    private int maxCandidateIndex;
-    private final EntryHandler searchEntryHandler = (b, i) -> {};
+    private int entryMask;
+    private boolean noDeletes = true;
 
     /**
      * Constructor for the map.
@@ -61,13 +60,16 @@ public final class CharSequenceMap
         final int maxKeyLength, final int initialSize,
         final ToIntFunction<CharSequence> hash, final long missingValue)
     {
+        if (maxKeyLength > (1 << 28))
+        {
+            throw new IllegalArgumentException("Key too long");
+        }
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
-        mask = totalEntryCount - 1;
-        entrySize = (maxKeyLength + 3);
-        idOffset = maxKeyLength + 1;
-        dataBuffer = bufferFactory.apply(((maxKeyLength + 3) * Integer.BYTES) * totalEntryCount);
+        entryMask = totalEntryCount - 1;
+        final int entrySizeInInts = (maxKeyLength + 3);
+        entrySizeInBytes = entrySizeInInts * Integer.BYTES;
+        dataBuffer = bufferFactory.apply((entrySizeInInts * Integer.BYTES) * totalEntryCount);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
-        maxCandidateIndex = totalEntryCount * entrySize;
         this.maxKeyLength = maxKeyLength;
         this.hash = hash;
         this.missingValue = missingValue;
@@ -89,19 +91,21 @@ public final class CharSequenceMap
         {
             rehash();
         }
-        final int index = entrySize * (hash.applyAsInt(value) & mask);
-        if (isIndexPositionForValue(value, index))
+        final int entryIndex = (hash.applyAsInt(value) & entryMask);
+
+        if (isIndexPositionForValue(value, entryIndex))
         {
-            insertEntry(value, id, index);
+            insertEntry(value, id, entryIndex);
         }
         else
         {
             for (int i = 1; i < totalEntryCount; i++)
             {
-                int candidateIndex = (index + (i * entrySize));
-                if (candidateIndex >= maxCandidateIndex)
+                int candidateIndex = (entryIndex + (i));
+
+                if (candidateIndex >= totalEntryCount)
                 {
-                    candidateIndex -= maxCandidateIndex;
+                    candidateIndex -= totalEntryCount;
                 }
                 if (isIndexPositionForValue(value, candidateIndex))
                 {
@@ -146,39 +150,37 @@ public final class CharSequenceMap
         return liveEntryCount;
     }
 
-    private void insertEntry(final CharSequence value, final long id, final int index)
+    private void insertEntry(final CharSequence value, final long id, final int entryIndex)
     {
-        final int byteOffset = index * Integer.BYTES;
-        dataBuffer.putInt(byteOffset, 1);
-        dataBuffer.putInt(lengthOffset(index) * Integer.BYTES, value.length());
+        setValueLength(entryIndex, value.length(), dataBuffer);
+        final int keyOffset = keyOffset(entryIndex);
         for (int i = 0; i < value.length(); i++)
         {
-            dataBuffer.putInt(byteOffset + (2 * Integer.BYTES) + (i * Integer.BYTES), value.charAt(i));
+            dataBuffer.putInt(keyOffset + (i * Integer.BYTES), value.charAt(i));
         }
-
-        writeId(id, index);
+        setId(entryIndex, id, dataBuffer);
         liveEntryCount++;
     }
 
     private void rehash()
     {
+        System.out.println("Rehash");
         final ByteBuffer oldBuffer = dataBuffer;
         final int oldEntryCount = totalEntryCount;
 
         dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
         totalEntryCount *= 2;
-        mask = totalEntryCount - 1;
+        entryMask = totalEntryCount - 1;
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         liveEntryCount = 0;
-        maxCandidateIndex = totalEntryCount * entrySize;
 
         for (int i = 0; i < oldEntryCount; i++)
         {
-            final int index = i * entrySize;
-            if (oldBuffer.getInt(index * Integer.BYTES) != 0)
+            if (isValuePresent(i, oldBuffer))
             {
-                final long id = readId(index, oldBuffer);
-                charBuffer.reset(oldBuffer, dataOffset(index), oldBuffer.getInt(lengthOffset(index) * Integer.BYTES));
+                final long id = getId(i, oldBuffer);
+
+                charBuffer.reset(oldBuffer, keyOffset(i), getValueLength(i, oldBuffer));
                 put(charBuffer, id);
             }
         }
@@ -186,33 +188,37 @@ public final class CharSequenceMap
 
     private long search(final CharSequence value, final EntryHandler entryHandler)
     {
-        int index = entrySize * (hash.applyAsInt(value) & mask);
+        int entryIndex = (hash.applyAsInt(value) & entryMask);
         int entry = 0;
         while (entry < totalEntryCount)
         {
-            if (dataBuffer.getInt((index * Integer.BYTES) % dataBuffer.capacity()) == 0)
+            if (!isValuePresent(entryIndex, dataBuffer) && noDeletes)
             {
                 break;
             }
 
             boolean matches = true;
 
+            final int keyOffset = keyOffset(entryIndex);
             for (int i = 0; i < value.length(); i++)
             {
-                if (dataBuffer.getInt(((dataOffset(index) + i) * Integer.BYTES) %
-                    dataBuffer.capacity()) != value.charAt(i))
+                if (dataBuffer.getInt(keyOffset + i * Integer.BYTES) != value.charAt(i))
                 {
                     matches = false;
                 }
             }
             if (matches)
             {
-                final long storedId = readId(index, dataBuffer);
-                entryHandler.onEntryFound(dataBuffer, index);
+                final long storedId = getId(entryIndex, dataBuffer);
+                entryHandler.onEntryFound(dataBuffer, entryIndex);
                 return storedId;
             }
 
-            index += entrySize;
+            entryIndex++;
+            if (entryIndex == totalEntryCount)
+            {
+                entryIndex = 0;
+            }
             entry++;
         }
 
@@ -224,26 +230,17 @@ public final class CharSequenceMap
         void onEntryFound(ByteBuffer dataBuffer, int index);
     }
 
-    private void writeId(final long id, final int index)
+    private boolean isIndexPositionForValue(final CharSequence value, final int entryIndex)
     {
-        dataBuffer.putLong((index + idOffset) * Integer.BYTES, id);
+        return !isValuePresent(entryIndex, dataBuffer) || isExistingEntryAt(value, entryIndex);
     }
 
-    private long readId(final int index, final ByteBuffer backingBuffer)
+    private boolean isExistingEntryAt(final CharSequence value, final int entryIndex)
     {
-        return backingBuffer.getLong(((index + idOffset) * Integer.BYTES) % backingBuffer.capacity());
-    }
-
-    private boolean isIndexPositionForValue(final CharSequence value, final int index)
-    {
-        return dataBuffer.getInt(index * Integer.BYTES) == 0 || isExistingEntry(value, index);
-    }
-
-    private boolean isExistingEntry(final CharSequence value, final int index)
-    {
+        final int keyOffset = keyOffset(entryIndex);
         for (int i = 0; i < value.length(); i++)
         {
-            if (dataBuffer.getInt((dataOffset(index) + i) * Integer.BYTES) != value.charAt(i))
+            if (dataBuffer.getInt(keyOffset + (i * Integer.BYTES)) != value.charAt(i))
             {
                 return false;
             }
@@ -261,15 +258,39 @@ public final class CharSequenceMap
         return hash;
     }
 
-    private static int dataOffset(final int index)
+    private int byteOffset(final int entryIndex)
     {
-        return index + 2;
+        return entryIndex * entrySizeInBytes;
     }
 
-    // TODO - length could indicate presence, set 0th element to -1 on start
-    private static int lengthOffset(final int index)
+    private boolean isValuePresent(final int entryIndex, final ByteBuffer dataBuffer)
     {
-        return index + 1;
+        return (0b1000_0000_0000_0000_0000_0000_0000_0000 & dataBuffer.getInt(byteOffset(entryIndex))) != 0;
+    }
+
+    private void setValueLength(final int entryIndex, final int valueLength, final ByteBuffer dataBuffer)
+    {
+        dataBuffer.putInt(byteOffset(entryIndex), 0b1000_0000_0000_0000_0000_0000_0000_0000 | valueLength);
+    }
+
+    private int getValueLength(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return (0b0111_1111_1111_1111_1111_1111_1111_1111 & dataBuffer.getInt(byteOffset(entryIndex)));
+    }
+
+    private void setId(final int entryIndex, final long id, final ByteBuffer dataBuffer)
+    {
+        dataBuffer.putLong(byteOffset(entryIndex) + Integer.BYTES, id);
+    }
+
+    private long getId(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return dataBuffer.getLong(byteOffset(entryIndex) + Integer.BYTES);
+    }
+
+    private int keyOffset(final int entryIndex)
+    {
+        return byteOffset(entryIndex) + Integer.BYTES * 3;
     }
 
     private static final class CharArrayCharSequence implements CharSequence
@@ -294,7 +315,7 @@ public final class CharSequenceMap
         @Override
         public char charAt(final int i)
         {
-            return (char)dataBuffer.getInt((offset + i) * Integer.BYTES);
+            return (char)dataBuffer.getInt((offset) + (i * Integer.BYTES));
         }
 
         @Override
@@ -318,18 +339,15 @@ public final class CharSequenceMap
     private class RemoveEntryHandler implements EntryHandler
     {
         @Override
-        public void onEntryFound(final ByteBuffer buffer, final int index)
+        public void onEntryFound(final ByteBuffer buffer, final int entryIndex)
         {
-            final int byteOffset = index * Integer.BYTES;
-            buffer.putInt(byteOffset, 0);
-            buffer.putInt(lengthOffset(index) * Integer.BYTES, 0);
-            for (int i = 0; i < maxKeyLength; i++)
+            final int byteOffset = byteOffset(entryIndex);
+            for (int i = 0; i < entrySizeInBytes; i++)
             {
-                buffer.putInt(byteOffset + (2 * Integer.BYTES) + (i * Integer.BYTES), 0);
+                buffer.put(byteOffset + i, (byte)0);
             }
-
-            CharSequenceMap.this.writeId(0, index);
             liveEntryCount--;
+            noDeletes = false;
         }
     }
 }

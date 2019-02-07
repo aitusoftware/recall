@@ -17,14 +17,12 @@
  */
 package com.aitusoftware.recall.map;
 
-import static com.google.common.truth.Truth.assertThat;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import static com.google.common.truth.Truth.assertThat;
 
 class CharSequenceMapTest
 {
@@ -36,7 +34,6 @@ class CharSequenceMapTest
 
     private final CharSequenceMap map = new CharSequenceMap(
         MAX_KEY_LENGTH, INITIAL_SIZE, MISSING_VALUE);
-    private final List<Long> receivedList = new ArrayList<>();
 
     @Test
     void shouldRejectKeyThatIsTooLong()
@@ -60,9 +57,7 @@ class CharSequenceMapTest
     @Test
     void shouldNotRetrieveUnknownValue()
     {
-        map.get(SEARCH_TERM);
-
-        assertThat(receivedList).isEmpty();
+        assertThat(map.get(SEARCH_TERM)).isEqualTo(MISSING_VALUE);
     }
 
     @Test
@@ -77,9 +72,6 @@ class CharSequenceMapTest
         poorIndex.put(otherTerm, otherId);
 
         assertSearchResult(poorIndex, SEARCH_TERM, ID);
-
-        receivedList.clear();
-
         assertSearchResult(poorIndex, otherTerm, otherId);
     }
 
@@ -95,7 +87,6 @@ class CharSequenceMapTest
 
         for (int i = 0; i < doubleInitialSize; i++)
         {
-            receivedList.clear();
             assertSearchResult(map, "searchTerm_" + i, i);
         }
     }
@@ -138,19 +129,20 @@ class CharSequenceMapTest
         assertThat(map.size()).isEqualTo(0);
     }
 
-    @Disabled
     @Test
     void comparisonTest()
     {
         final Map<String, Long> control = new HashMap<>();
-        final Random random = ThreadLocalRandom.current();
+        final Random random = new Random(1234567890L);
 
         for (int i = 0; i < 10_000; i++)
         {
-            final String key = UUID.randomUUID().toString();
+            final String key = new UUID(random.nextLong(), random.nextLong()).toString();
             final long value = random.nextLong();
             control.put(key, value);
             map.put(key, value);
+
+            assertThat(map.get(key)).isEqualTo(control.get(key));
         }
 
         assertThat(map.size()).isEqualTo(10_000);
@@ -161,7 +153,9 @@ class CharSequenceMapTest
         {
             if ((counter++ & 7) == 0)
             {
-                assertThat(map.remove(controlKey)).isEqualTo(control.remove(controlKey));
+                final long controlValue = control.remove(controlKey);
+                assertThat(map.remove(controlKey)).named("key %s failed", controlKey)
+                    .isEqualTo(controlValue);
             }
         }
 

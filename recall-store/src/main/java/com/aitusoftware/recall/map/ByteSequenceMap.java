@@ -37,6 +37,8 @@ public final class ByteSequenceMap
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
     private final long missingValue;
     private final int maxKeyLength;
+    private final EntryHandler getEntryHandler = (b, i) -> {};
+    private final EntryHandler removeEntryHandler = new RemoveEntryHandler();
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
@@ -44,8 +46,6 @@ public final class ByteSequenceMap
     private int mask;
     private int entrySize;
     private int endOfBuffer;
-    private final EntryHandler getEntryHandler = (b, i) -> {};
-    private final EntryHandler removeEntryHandler = new RemoveEntryHandler();
 
     /**
      * Constructor for the map.
