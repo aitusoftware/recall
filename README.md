@@ -207,7 +207,6 @@ private void execute()
     }
 
     final Order container = Order.of(-1L);
-    final AtomicInteger matchCount = new AtomicInteger();
     for (int i = 0; i < INITIAL_SIZE; i++)
     {
         final String searchTerm = symbols[i];
@@ -218,3 +217,8 @@ private void execute()
     }
 }
 ```
+
+### `ByteSequenceMap`
+
+`ByteSequenceMap` is an open-addressed hash map with that can be used to store a `ByteBuffer`
+against an integer identifier.
