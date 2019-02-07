@@ -28,10 +28,6 @@ import org.agrona.BitUtil;
  */
 public final class ByteSequenceMap
 {
-    private static final int ID_OFFSET = 0;
-    private static final int LENGTH_OFFSET = Long.BYTES;
-    private static final int USED_INDICATOR_OFFSET = Long.BYTES + Integer.BYTES;
-    private static final int DATA_OFFSET = Long.BYTES + Integer.BYTES + Byte.BYTES;
     private final ToIntFunction<ByteBuffer> hash;
     private final float loadFactor = 0.7f;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
@@ -43,9 +39,8 @@ public final class ByteSequenceMap
     private int totalEntryCount;
     private int liveEntryCount;
     private int entryCountToTriggerRehash;
-    private int mask;
-    private int entrySize;
-    private int endOfBuffer;
+    private int entryMask;
+    private int entrySizeInBytes;
     private boolean noDeletes = true;
 
     /**
@@ -65,11 +60,10 @@ public final class ByteSequenceMap
         final ToIntFunction<ByteBuffer> hash, final long missingValue)
     {
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
-        mask = totalEntryCount - 1;
-        entrySize = (maxKeyLength + Byte.BYTES + Integer.BYTES + Long.BYTES);
-        dataBuffer = bufferFactory.apply(entrySize * totalEntryCount);
+        entryMask = totalEntryCount - 1;
+        entrySizeInBytes = (maxKeyLength + Integer.BYTES + Long.BYTES);
+        dataBuffer = bufferFactory.apply(entrySizeInBytes * totalEntryCount);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
-        endOfBuffer = totalEntryCount * entrySize;
         this.hash = hash;
         this.missingValue = missingValue;
         this.maxKeyLength = maxKeyLength;
@@ -91,23 +85,23 @@ public final class ByteSequenceMap
         {
             rehash();
         }
-        final int offset = entrySize * (hash.applyAsInt(value) & mask);
-        if (isIndexPositionForValue(value, offset))
+        final int entryIndex = (hash.applyAsInt(value) & entryMask);
+        if (isIndexPositionForValue(value, entryIndex))
         {
-            insertEntry(value, id, offset);
+            insertEntry(value, id, entryIndex);
         }
         else
         {
             for (int i = 1; i < totalEntryCount; i++)
             {
-                int candidateOffset = (offset + (i * entrySize));
-                if (candidateOffset >= endOfBuffer)
+                int candidateIndex = (entryIndex + (i));
+                if (candidateIndex >= totalEntryCount)
                 {
-                    candidateOffset -= endOfBuffer;
+                    candidateIndex -= totalEntryCount;
                 }
-                if (isIndexPositionForValue(value, candidateOffset))
+                if (isIndexPositionForValue(value, candidateIndex))
                 {
-                    insertEntry(value, id, candidateOffset);
+                    insertEntry(value, id, candidateIndex);
                     return;
                 }
             }
@@ -150,20 +144,20 @@ public final class ByteSequenceMap
 
     private long search(final ByteBuffer value, final EntryHandler entryHandler)
     {
-        int entryIndex = entrySize * (hash.applyAsInt(value) & mask);
+        int entryIndex = (hash.applyAsInt(value) & entryMask);
         int entry = 0;
         while (entry < totalEntryCount)
         {
-            if (dataBuffer.get((entryIndex + USED_INDICATOR_OFFSET) % dataBuffer.capacity()) == 0 && noDeletes)
+            if (!isValuePresent(entryIndex, dataBuffer) && noDeletes)
             {
                 break;
             }
 
             boolean matches = true;
-            final int endOfData = value.remaining() + entryIndex + DATA_OFFSET;
-            for (int i = entryIndex + DATA_OFFSET; i < endOfData; i++)
+            final int keyOffset = keyOffset(entryIndex);
+            for (int i = 0; i < value.remaining(); i++)
             {
-                if (dataBuffer.get(i % dataBuffer.capacity()) != value.get((i - entryIndex - DATA_OFFSET)))
+                if (dataBuffer.get(keyOffset + i) != value.get(value.position() + (i)))
                 {
                     matches = false;
                     break;
@@ -171,11 +165,12 @@ public final class ByteSequenceMap
             }
             if (matches)
             {
-                final long storedId = dataBuffer.getLong((entryIndex + ID_OFFSET) % dataBuffer.capacity());
+                final long storedId = getId(entryIndex, dataBuffer);
                 entryHandler.onEntryFound(dataBuffer, entryIndex);
                 return storedId;
             }
-            entryIndex += entrySize;
+            entryIndex++;
+            entryIndex = entryIndex & entryMask;
             entry++;
         }
 
@@ -187,19 +182,6 @@ public final class ByteSequenceMap
         void onEntryFound(ByteBuffer dataBuffer, int index);
     }
 
-    private void insertEntry(final ByteBuffer value, final long id, final int offset)
-    {
-        dataBuffer.putLong(offset, id);
-        dataBuffer.putInt(offset + LENGTH_OFFSET, value.remaining());
-        dataBuffer.put(offset + USED_INDICATOR_OFFSET, (byte)1);
-        final int endOfData = value.remaining() + offset + DATA_OFFSET;
-        for (int i = offset + DATA_OFFSET; i < endOfData; i++)
-        {
-            dataBuffer.put(i, value.get(value.position() + i - offset - DATA_OFFSET));
-        }
-        liveEntryCount++;
-    }
-
     private void rehash()
     {
         final ByteBuffer oldBuffer = dataBuffer;
@@ -207,37 +189,48 @@ public final class ByteSequenceMap
 
         dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
         totalEntryCount *= 2;
-        mask = totalEntryCount - 1;
+        entryMask = totalEntryCount - 1;
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         liveEntryCount = 0;
-        endOfBuffer = totalEntryCount * entrySize;
 
         for (int i = 0; i < oldEntryCount; i++)
         {
-            final int offset = i * entrySize;
-            if (oldBuffer.get(offset + USED_INDICATOR_OFFSET) != 0)
+            if (isValuePresent(i, oldBuffer))
             {
-
-                final int valueLength = oldBuffer.getInt(offset + LENGTH_OFFSET);
-                oldBuffer.limit(offset + DATA_OFFSET + valueLength)
-                        .position(offset + DATA_OFFSET);
-                put(oldBuffer, oldBuffer.getLong(offset + ID_OFFSET));
+                final long id = getId(i, oldBuffer);
+                final int sourceOffset = keyOffset(i);
+                final int valueLength = getValueLength(i, oldBuffer);
+                final int endPosition = sourceOffset + valueLength;
+                oldBuffer.limit(endPosition).position(sourceOffset);
+                put(oldBuffer, id);
                 oldBuffer.limit(oldBuffer.capacity()).position(0);
             }
         }
     }
 
-    private boolean isIndexPositionForValue(final ByteBuffer value, final int offset)
+    private void insertEntry(final ByteBuffer value, final long id, final int entryIndex)
     {
-        return dataBuffer.getInt(offset + USED_INDICATOR_OFFSET) == 0 || isExistingEntry(value, offset);
+        setValueLength(entryIndex, value.remaining(), dataBuffer);
+        final int keyOffset = keyOffset(entryIndex);
+        for (int i = 0; i < value.remaining(); i++)
+        {
+            dataBuffer.put(keyOffset + (i), value.get(i + value.position()));
+        }
+        setId(entryIndex, id, dataBuffer);
+        liveEntryCount++;
     }
 
-    private boolean isExistingEntry(final ByteBuffer value, final int offset)
+    private boolean isIndexPositionForValue(final ByteBuffer value, final int entryIndex)
     {
-        final int endOfData = value.remaining() + offset + DATA_OFFSET;
-        for (int i = offset + DATA_OFFSET; i < endOfData; i++)
+        return !isValuePresent(entryIndex, dataBuffer) || isExistingEntryAt(value, entryIndex);
+    }
+
+    private boolean isExistingEntryAt(final ByteBuffer value, final int entryIndex)
+    {
+        final int keyOffset = keyOffset(entryIndex);
+        for (int i = 0; i < value.remaining(); i++)
         {
-            if (dataBuffer.get(i) != value.get(value.position() + i - offset - DATA_OFFSET))
+            if (dataBuffer.get(keyOffset + (i)) != value.get(value.position() + i))
             {
                 return false;
             }
@@ -256,18 +249,50 @@ public final class ByteSequenceMap
         return hash;
     }
 
+    private int byteOffset(final int entryIndex)
+    {
+        return entryIndex * entrySizeInBytes;
+    }
+
+    private boolean isValuePresent(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return (0b1000_0000_0000_0000_0000_0000_0000_0000 & dataBuffer.getInt(byteOffset(entryIndex))) != 0;
+    }
+
+    private void setValueLength(final int entryIndex, final int valueLength, final ByteBuffer dataBuffer)
+    {
+        dataBuffer.putInt(byteOffset(entryIndex), 0b1000_0000_0000_0000_0000_0000_0000_0000 | valueLength);
+    }
+
+    private int getValueLength(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return (0b0111_1111_1111_1111_1111_1111_1111_1111 & dataBuffer.getInt(byteOffset(entryIndex)));
+    }
+
+    private void setId(final int entryIndex, final long id, final ByteBuffer dataBuffer)
+    {
+        dataBuffer.putLong(byteOffset(entryIndex) + Integer.BYTES, id);
+    }
+
+    private long getId(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return dataBuffer.getLong(byteOffset(entryIndex) + Integer.BYTES);
+    }
+
+    private int keyOffset(final int entryIndex)
+    {
+        return byteOffset(entryIndex) + Integer.BYTES * 3;
+    }
+
     private class RemoveEntryHandler implements EntryHandler
     {
         @Override
         public void onEntryFound(final ByteBuffer dataBuffer, final int index)
         {
-            dataBuffer.putLong(index, 0);
-            dataBuffer.putInt(index + LENGTH_OFFSET, 0);
-            dataBuffer.put(index + USED_INDICATOR_OFFSET, (byte)1);
-            final int endOfData = maxKeyLength + index + DATA_OFFSET;
-            for (int i = index + DATA_OFFSET; i < endOfData; i++)
+            final int byteOffset = byteOffset(index);
+            for (int i = 0; i < entrySizeInBytes; i++)
             {
-                dataBuffer.put(i, (byte)0);
+                dataBuffer.put(byteOffset + i, (byte)0);
             }
             liveEntryCount--;
             noDeletes = false;
