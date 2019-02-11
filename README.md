@@ -12,6 +12,26 @@ Recall is designed for use in allocation-free or low-garbage systems. Objects ar
 mutable in order to reduce allocation costs. For this reason, domain objects should have
 mutator methods for any fields that need to be serialised.
 
+### Dependency
+
+#### Gradle
+
+```
+dependencies {
+    compile group: 'com.aitusoftware', name: 'recall-store', version: '0.1.0'
+}
+```
+
+#### Maven
+
+```xml
+<dependency>
+    <groupId>com.aitusoftware</groupId>
+    <artifactId>recall-store</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
 Recall can use either a standard JDK `ByteBuffer` or an
 [Agrona](https://github.com/real-logic/Agrona) `UnsafeBuffer` for storage of
 objects outside of the Java heap.
