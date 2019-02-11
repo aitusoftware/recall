@@ -168,7 +168,7 @@ SBE messages can now be stored for later retrieval:
 public void receiveCar(ReadableByteChannel channel) {
   CarDecoder decoder = new CarDecoder();
   UnsafeBuffer buffer = new UnsafeBuffer();
-  ByteBuffer inputData = ByteBuffer.allocateDirect();
+  ByteBuffer inputData = ByteBuffer.allocateDirect(MAX_RECORD_LENGTH);
   channel.read(inputData);
   inputData.flip();
   buffer.wrap(inputData);
