@@ -28,3 +28,4 @@ hs_err_pid*
 todo.txt
 recall-sbe/out
 recall-store/out
+build/

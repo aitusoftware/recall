@@ -83,7 +83,6 @@ public final class BufferStore<B> implements Store<B>
         this.bufferFactory = bufferFactory;
         buffer = existingBuffer;
         this.nextWriteOffset = header.nextWriteOffset();
-        // TODO scan values & build map
         this.header = header;
         final int numberOfRecords = nextWriteOffset / internalRecordLength;
         for (int i = 0; i < numberOfRecords; i++)
@@ -169,7 +168,15 @@ public final class BufferStore<B> implements Store<B>
             nextWriteOffset += internalRecordLength;
             size++;
         }
-        encoder.store(this.buffer, recordWriteOffset, value);
+        try
+        {
+            encoder.store(this.buffer, recordWriteOffset, value);
+        }
+        catch (final IllegalArgumentException e)
+        {
+            throw new IllegalArgumentException(String.format("Failed to store value with id %d at offset %d",
+                valueId, recordWriteOffset), e);
+        }
     }
 
     /**

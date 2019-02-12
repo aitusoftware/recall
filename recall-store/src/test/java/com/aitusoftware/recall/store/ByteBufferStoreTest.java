@@ -22,6 +22,7 @@ import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.LongHashSet;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -288,6 +289,25 @@ class ByteBufferStoreTest
         while (iterator.hasNext())
         {
             assertThat(loadedStore.load(iterator.nextValue(), transcoder, Order.of(77))).isTrue();
+        }
+    }
+
+    @Disabled
+    @Test
+    void shouldAllowForStoreSizesGreaterThanTwoGigabytes()
+    {
+        final int entrySize = 1024 * 1024;
+        final int initialEntryCount = 3000;
+
+        final BufferStore<ByteBuffer> largeStore = new BufferStore<>(entrySize, initialEntryCount,
+            ByteBuffer::allocateDirect, new ByteBufferOps());
+
+        final LargeObjectTranscoder transcoder = new LargeObjectTranscoder();
+        for (int i = 0; i < initialEntryCount; i++)
+        {
+            final LargeObject value = new LargeObject();
+            value.set(i, (byte)i);
+            largeStore.store(transcoder, value, transcoder);
         }
     }
 
