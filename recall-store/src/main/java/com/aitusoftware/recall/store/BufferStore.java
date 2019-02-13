@@ -20,6 +20,7 @@ package com.aitusoftware.recall.store;
 import com.aitusoftware.recall.persistence.Decoder;
 import com.aitusoftware.recall.persistence.Encoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
+import org.agrona.collections.Hashing;
 import org.agrona.collections.Long2LongHashMap;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ public final class BufferStore<B> implements Store<B>
     private static final long NOT_IN_MAP = Long.MIN_VALUE;
     private static final int DATA_OFFSET = Header.LENGTH;
     private static final int HEADER_OFFSET = 0;
-    private final Long2LongHashMap index = new Long2LongHashMap(NOT_IN_MAP);
+    private final Long2LongHashMap index;
     private final int internalRecordLength;
     private final BufferOps<B> bufferOps;
     private final IntFunction<B> bufferFactory;
@@ -71,6 +72,7 @@ public final class BufferStore<B> implements Store<B>
         header.maxRecordLength(maxRecordLength).version(Version.ONE)
             .storeLength(bufferCapacity).nextWriteOffset(nextWriteOffset);
         header.writeTo(buffer, bufferOps, HEADER_OFFSET);
+        index = new Long2LongHashMap(initialSize, Hashing.DEFAULT_LOAD_FACTOR, NOT_IN_MAP);
     }
 
     private BufferStore(
@@ -85,6 +87,7 @@ public final class BufferStore<B> implements Store<B>
         this.nextWriteOffset = header.nextWriteOffset();
         this.header = header;
         final int numberOfRecords = nextWriteOffset / internalRecordLength;
+        index = new Long2LongHashMap(numberOfRecords, Hashing.DEFAULT_LOAD_FACTOR, NOT_IN_MAP);
         for (int i = 0; i < numberOfRecords; i++)
         {
             final int entryOffset = (i * internalRecordLength) + DATA_OFFSET;
