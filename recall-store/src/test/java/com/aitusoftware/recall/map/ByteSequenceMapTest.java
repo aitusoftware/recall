@@ -195,6 +195,16 @@ class ByteSequenceMapTest
         }
     }
 
+    @Test
+    void sizeShouldNotIncreaseWithRepeatedInserts()
+    {
+        for (int i = 0; i < 100; i++)
+        {
+            map.put(toBuffer("key_" + (i % 10)), i);
+            assertThat(map.size()).isAtMost(10);
+        }
+    }
+
 
     private void assertSearchResult(final ByteSequenceMap index, final ByteBuffer searchTerm, final long retrievedId)
     {
