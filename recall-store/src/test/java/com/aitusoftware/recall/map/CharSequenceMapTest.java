@@ -31,6 +31,11 @@ class CharSequenceMapTest
     private static final int INITIAL_SIZE = 16;
     private static final long MISSING_VALUE = Long.MIN_VALUE;
     private static final int MAX_KEY_LENGTH = 64;
+    private static final int MAP_SIZE = 4096;
+    private static final int KEY_COUNT = 2048;
+    private static final int KEY_MASK = KEY_COUNT - 1;
+    private final Random random = new Random(238429384723L);
+    private final CharSequence[] charSequenceKeys = new CharSequence[KEY_COUNT];
 
     private final CharSequenceMap map = new CharSequenceMap(
         MAX_KEY_LENGTH, INITIAL_SIZE, MISSING_VALUE);
@@ -187,6 +192,50 @@ class CharSequenceMapTest
         {
             assertThat(map.get(controlKey)).isEqualTo(control.get(controlKey));
         }
+    }
+
+    @Test
+    void testLargeInsertsAreUnique()
+    {
+        final int keyLength = 10;
+        final CharSequenceMap charSequenceMap =
+            new CharSequenceMap(keyLength, MAP_SIZE, Long.MIN_VALUE);
+        final Map<String, Integer> comparisonMap = new HashMap<>();
+
+        for (int i = 0; i < KEY_COUNT; i++)
+        {
+            charSequenceKeys[i] = randomKey(keyLength);
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < KEY_COUNT; j++)
+            {
+                final int iteration = (i * KEY_COUNT) + j;
+                final CharSequence key = charSequenceKeys[keyIndex(iteration)];
+                charSequenceMap.put(key, iteration);
+                comparisonMap.put(key.toString(), iteration);
+
+                assertThat(comparisonMap.size()).isAtMost(KEY_COUNT);
+                assertThat(charSequenceMap.size()).isAtMost(KEY_COUNT);
+            }
+        }
+    }
+
+
+    private int keyIndex(final long value)
+    {
+        return (int)(value & KEY_MASK);
+    }
+
+    private CharSequence randomKey(final int keyLength)
+    {
+        final StringBuilder builder = new StringBuilder(keyLength);
+        for (int i = 0; i < keyLength; i++)
+        {
+            builder.append((char)('A' + random.nextInt('Z' - 'A')));
+        }
+        return builder;
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)

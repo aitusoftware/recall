@@ -86,9 +86,10 @@ public final class ByteSequenceMap
             rehash(true);
         }
         final int entryIndex = (hash.applyAsInt(value) & entryMask);
-        if (isIndexPositionForValue(value, entryIndex))
+        final boolean existingEntryAt = isExistingEntryAt(value, entryIndex);
+        if (!isValuePresent(entryIndex, dataBuffer) || existingEntryAt)
         {
-            insertEntry(value, id, entryIndex);
+            insertEntry(value, id, entryIndex, !existingEntryAt);
         }
         else
         {
@@ -99,9 +100,10 @@ public final class ByteSequenceMap
                 {
                     candidateIndex -= totalEntryCount;
                 }
-                if (isIndexPositionForValue(value, candidateIndex))
+                final boolean innerExistingEntryAt = isExistingEntryAt(value, candidateIndex);
+                if (!isValuePresent(candidateIndex, dataBuffer) || innerExistingEntryAt)
                 {
-                    insertEntry(value, id, candidateIndex);
+                    insertEntry(value, id, candidateIndex, !innerExistingEntryAt);
                     return;
                 }
             }
@@ -223,7 +225,9 @@ public final class ByteSequenceMap
         }
     }
 
-    private void insertEntry(final ByteBuffer value, final long id, final int entryIndex)
+    private void insertEntry(
+        final ByteBuffer value, final long id,
+        final int entryIndex, final boolean isInsert)
     {
         setValueLength(entryIndex, value.remaining(), dataBuffer);
         final int keyOffset = keyOffset(entryIndex);
@@ -232,12 +236,10 @@ public final class ByteSequenceMap
             dataBuffer.put(keyOffset + (i), value.get(i + value.position()));
         }
         setId(entryIndex, id, dataBuffer);
-        liveEntryCount++;
-    }
-
-    private boolean isIndexPositionForValue(final ByteBuffer value, final int entryIndex)
-    {
-        return !isValuePresent(entryIndex, dataBuffer) || isExistingEntryAt(value, entryIndex);
+        if (isInsert)
+        {
+            liveEntryCount++;
+        }
     }
 
     private boolean isExistingEntryAt(final ByteBuffer value, final int entryIndex)

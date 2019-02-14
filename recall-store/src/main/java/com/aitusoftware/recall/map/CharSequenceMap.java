@@ -93,9 +93,10 @@ public final class CharSequenceMap
         }
         final int entryIndex = (hash.applyAsInt(value) & entryMask);
 
-        if (isIndexPositionForValue(value, entryIndex))
+        final boolean existingEntryAt = isExistingEntryAt(value, entryIndex);
+        if (isEmptyEntrySlot(entryIndex) || existingEntryAt)
         {
-            insertEntry(value, id, entryIndex);
+            insertEntry(value, id, entryIndex, !existingEntryAt);
         }
         else
         {
@@ -107,9 +108,10 @@ public final class CharSequenceMap
                 {
                     candidateIndex -= totalEntryCount;
                 }
-                if (isIndexPositionForValue(value, candidateIndex))
+                final boolean innerExistingEntryAt = isExistingEntryAt(value, candidateIndex);
+                if (isEmptyEntrySlot(candidateIndex) || innerExistingEntryAt)
                 {
-                    insertEntry(value, id, candidateIndex);
+                    insertEntry(value, id, candidateIndex, !innerExistingEntryAt);
                     return;
                 }
             }
@@ -158,7 +160,9 @@ public final class CharSequenceMap
         rehash(false);
     }
 
-    private void insertEntry(final CharSequence value, final long id, final int entryIndex)
+    private void insertEntry(
+        final CharSequence value, final long id,
+        final int entryIndex, final boolean isInsert)
     {
         setValueLength(entryIndex, value.length(), dataBuffer);
         final int keyOffset = keyOffset(entryIndex);
@@ -167,7 +171,15 @@ public final class CharSequenceMap
             dataBuffer.putInt(keyOffset + (i * Integer.BYTES), value.charAt(i));
         }
         setId(entryIndex, id, dataBuffer);
-        liveEntryCount++;
+        if (isInsert)
+        {
+            liveEntryCount++;
+        }
+    }
+
+    private boolean isEmptyEntrySlot(final int entryIndex)
+    {
+        return !isValuePresent(entryIndex, dataBuffer);
     }
 
     private void rehash(final boolean shouldResize)
@@ -207,7 +219,7 @@ public final class CharSequenceMap
         int entry = 0;
         while (entry < totalEntryCount)
         {
-            if (!isValuePresent(entryIndex, dataBuffer) && noDeletes)
+            if (isEmptyEntrySlot(entryIndex) && noDeletes)
             {
                 break;
             }
@@ -240,11 +252,6 @@ public final class CharSequenceMap
     private interface EntryHandler
     {
         void onEntryFound(ByteBuffer dataBuffer, int index);
-    }
-
-    private boolean isIndexPositionForValue(final CharSequence value, final int entryIndex)
-    {
-        return !isValuePresent(entryIndex, dataBuffer) || isExistingEntryAt(value, entryIndex);
     }
 
     private boolean isExistingEntryAt(final CharSequence value, final int entryIndex)
