@@ -22,9 +22,10 @@ import com.aitusoftware.recall.example.Order;
 import com.aitusoftware.recall.example.OrderByteBufferTranscoder;
 import com.aitusoftware.recall.persistence.IdAccessor;
 import org.agrona.collections.LongHashSet;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -36,6 +37,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntFunction;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 class ByteBufferStoreTest
 {
@@ -280,7 +283,7 @@ class ByteBufferStoreTest
         }
         final Path storeFile = Files.createTempFile("recall", ".store");
         final FileChannel storeChannel = FileChannel.open(storeFile.toAbsolutePath(),
-            StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.READ);
+            StandardOpenOption.CREATE, WRITE, READ);
         store.writeTo(storeChannel);
 
         final BufferStore<ByteBuffer> loadedStore = BufferStore.loadFrom(storeChannel, bufferOps, bufferFactory);
@@ -292,23 +295,23 @@ class ByteBufferStoreTest
         }
     }
 
-    @Disabled
     @Test
-    void shouldAllowForStoreSizesGreaterThanTwoGigabytes()
+    void shouldBlowUpIfVersionIsUnknown() throws IOException
     {
-        final int entrySize = 1024 * 1024;
-        final int initialEntryCount = 3000;
+        store.store(transcoder, Order.of(17), idAccessor);
+        final File tempFile = File.createTempFile("BufferStoreTest", "bin");
+        store.writeTo(FileChannel.open(tempFile.toPath(), WRITE));
 
-        final BufferStore<ByteBuffer> largeStore = new BufferStore<>(entrySize, initialEntryCount,
-            ByteBuffer::allocateDirect, new ByteBufferOps());
+        final FileChannel serialisedStore = FileChannel.open(tempFile.toPath(), READ, WRITE);
+        final ByteBuffer headerBuffer = ByteBuffer.allocateDirect(Header.LENGTH);
+        serialisedStore.position(0).read(headerBuffer);
+        headerBuffer.flip();
+        headerBuffer.putInt(0, 234445);
+        serialisedStore.position(0).write(headerBuffer);
 
-        final LargeObjectTranscoder transcoder = new LargeObjectTranscoder();
-        for (int i = 0; i < initialEntryCount; i++)
-        {
-            final LargeObject value = new LargeObject();
-            value.set(i, (byte)i);
-            largeStore.store(transcoder, value, transcoder);
-        }
+        serialisedStore.position(0);
+        Assertions.assertThrows(IllegalArgumentException.class, () ->
+            BufferStore.loadFrom(serialisedStore, bufferOps, bufferFactory));
     }
 
     private void assertContent(
