@@ -37,7 +37,7 @@ public final class ByteSequenceMap
     private final long missingValue;
     private final int maxKeyLength;
     private final EntryHandler getEntryHandler = (b, i) -> {};
-    private final EntryHandler removeEntryHandler = new RemoveEntryHandler();
+    private final EntryHandler removeEntryHandler;
     private ByteBuffer dataBuffer;
     private int totalEntryCount;
     private int liveEntryCount;
@@ -70,6 +70,7 @@ public final class ByteSequenceMap
         this.hash = hash;
         this.missingValue = missingValue;
         this.maxKeyLength = maxKeyLength;
+        removeEntryHandler = new RemoveEntryHandler(entrySizeInBytes);
     }
 
     /**
@@ -328,15 +329,29 @@ public final class ByteSequenceMap
         return byteOffset(entryIndex) + KEY_OFFSET;
     }
 
-    private class RemoveEntryHandler implements EntryHandler
+    private final class RemoveEntryHandler implements EntryHandler
     {
-        @Override
-        public void onEntryFound(final ByteBuffer dataBuffer, final int index)
+        private final int longsInEntry;
+        private final int remainingBytesInEntry;
+
+        private RemoveEntryHandler(final int entrySizeInBytes)
         {
-            final int byteOffset = byteOffset(index);
-            for (int i = 0; i < entrySizeInBytes; i++)
+            longsInEntry = entrySizeInBytes / Long.BYTES;
+            remainingBytesInEntry = entrySizeInBytes & (Long.BYTES - 1);
+        }
+
+        @Override
+        public void onEntryFound(final ByteBuffer buffer, final int entryIndex)
+        {
+            int byteOffset = byteOffset(entryIndex);
+            for (int i = 0; i < longsInEntry; i++)
             {
-                dataBuffer.put(byteOffset + i, (byte)0);
+                buffer.putLong(byteOffset, 0L);
+                byteOffset += Long.BYTES;
+            }
+            for (int i = 0; i < remainingBytesInEntry; i++)
+            {
+                buffer.put(byteOffset++, (byte)0);
             }
             liveEntryCount--;
             noDeletes = false;

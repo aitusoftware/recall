@@ -37,7 +37,7 @@ public final class CharSequenceMap
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
     private final long missingValue;
     private final int maxKeyLength;
-    private final RemoveEntryHandler removeEntryHandler = new RemoveEntryHandler();
+    private final RemoveEntryHandler removeEntryHandler;
     private final EntryHandler searchEntryHandler = (b, i) -> {};
     private final int entrySizeInBytes;
     private ByteBuffer dataBuffer;
@@ -69,13 +69,13 @@ public final class CharSequenceMap
         }
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         entryMask = totalEntryCount - 1;
-        final int entrySizeInInts = (maxKeyLength + 4);
-        entrySizeInBytes = entrySizeInInts * Integer.BYTES;
-        dataBuffer = bufferFactory.apply((entrySizeInInts * Integer.BYTES) * totalEntryCount);
+        entrySizeInBytes = (maxKeyLength * Character.BYTES) + (4 * Integer.BYTES);
+        dataBuffer = bufferFactory.apply(entrySizeInBytes * totalEntryCount);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         this.maxKeyLength = maxKeyLength;
         this.hash = hash;
         this.missingValue = missingValue;
+        removeEntryHandler = new RemoveEntryHandler(entrySizeInBytes);
     }
 
     /**
@@ -172,7 +172,7 @@ public final class CharSequenceMap
         final int keyOffset = keyOffset(entryIndex);
         for (int i = 0; i < value.length(); i++)
         {
-            dataBuffer.putInt(keyOffset + (i * Integer.BYTES), value.charAt(i));
+            dataBuffer.putChar(keyOffset + (i * Character.BYTES), value.charAt(i));
         }
         setId(entryIndex, id, dataBuffer);
         setHash(entryIndex, hashValue, dataBuffer);
@@ -242,7 +242,7 @@ public final class CharSequenceMap
             {
                 for (int i = 0; i < value.length(); i++)
                 {
-                    if (dataBuffer.getInt(keyOffset + i * Integer.BYTES) != value.charAt(i))
+                    if (dataBuffer.getChar(keyOffset + i * Character.BYTES) != value.charAt(i))
                     {
                         matches = false;
                     }
@@ -278,7 +278,7 @@ public final class CharSequenceMap
         }
         for (int i = 0; i < value.length(); i++)
         {
-            if (dataBuffer.getInt(keyOffset + (i * Integer.BYTES)) != value.charAt(i))
+            if (dataBuffer.getChar(keyOffset + (i * Character.BYTES)) != value.charAt(i))
             {
                 return false;
             }
@@ -363,7 +363,7 @@ public final class CharSequenceMap
         @Override
         public char charAt(final int i)
         {
-            return (char)dataBuffer.getInt((offset) + (i * Integer.BYTES));
+            return dataBuffer.getChar((offset) + (i * Character.BYTES));
         }
 
         @Override
@@ -384,15 +384,29 @@ public final class CharSequenceMap
         }
     }
 
-    private class RemoveEntryHandler implements EntryHandler
+    private final class RemoveEntryHandler implements EntryHandler
     {
+        private final int longsInEntry;
+        private final int remainingBytesInEntry;
+
+        private RemoveEntryHandler(final int entrySizeInBytes)
+        {
+            longsInEntry = entrySizeInBytes / Long.BYTES;
+            remainingBytesInEntry = entrySizeInBytes & (Long.BYTES - 1);
+        }
+
         @Override
         public void onEntryFound(final ByteBuffer buffer, final int entryIndex)
         {
-            final int byteOffset = byteOffset(entryIndex);
-            for (int i = 0; i < entrySizeInBytes; i++)
+            int byteOffset = byteOffset(entryIndex);
+            for (int i = 0; i < longsInEntry; i++)
             {
-                buffer.put(byteOffset + i, (byte)0);
+                buffer.putLong(byteOffset, 0L);
+                byteOffset += Long.BYTES;
+            }
+            for (int i = 0; i < remainingBytesInEntry; i++)
+            {
+                buffer.put(byteOffset++, (byte)0);
             }
             liveEntryCount--;
             noDeletes = false;
