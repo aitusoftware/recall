@@ -28,6 +28,9 @@ import java.util.function.ToIntFunction;
  */
 public final class CharSequenceMap
 {
+    private static final int KEY_OFFSET = Integer.BYTES * 4;
+    private static final int HASH_OFFSET = Integer.BYTES * 3;
+    private static final int ID_OFFSET = Integer.BYTES;
     private final ToIntFunction<CharSequence> hash;
     private final CharArrayCharSequence charBuffer = new CharArrayCharSequence();
     private final float loadFactor = 0.7f;
@@ -66,7 +69,7 @@ public final class CharSequenceMap
         }
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         entryMask = totalEntryCount - 1;
-        final int entrySizeInInts = (maxKeyLength + 3);
+        final int entrySizeInInts = (maxKeyLength + 4);
         entrySizeInBytes = entrySizeInInts * Integer.BYTES;
         dataBuffer = bufferFactory.apply((entrySizeInInts * Integer.BYTES) * totalEntryCount);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
@@ -91,12 +94,13 @@ public final class CharSequenceMap
         {
             rehash(true);
         }
-        final int entryIndex = (hash.applyAsInt(value) & entryMask);
+        final int hashValue = hash.applyAsInt(value);
+        final int entryIndex = (hashValue & entryMask);
 
-        final boolean existingEntryAt = isExistingEntryAt(value, entryIndex);
+        final boolean existingEntryAt = isExistingEntryAt(value, entryIndex, hashValue);
         if (isEmptyEntrySlot(entryIndex) || existingEntryAt)
         {
-            insertEntry(value, id, entryIndex, !existingEntryAt);
+            insertEntry(value, id, entryIndex, !existingEntryAt, hashValue);
         }
         else
         {
@@ -108,10 +112,10 @@ public final class CharSequenceMap
                 {
                     candidateIndex -= totalEntryCount;
                 }
-                final boolean innerExistingEntryAt = isExistingEntryAt(value, candidateIndex);
+                final boolean innerExistingEntryAt = isExistingEntryAt(value, candidateIndex, hashValue);
                 if (isEmptyEntrySlot(candidateIndex) || innerExistingEntryAt)
                 {
-                    insertEntry(value, id, candidateIndex, !innerExistingEntryAt);
+                    insertEntry(value, id, candidateIndex, !innerExistingEntryAt, hashValue);
                     return;
                 }
             }
@@ -162,7 +166,7 @@ public final class CharSequenceMap
 
     private void insertEntry(
         final CharSequence value, final long id,
-        final int entryIndex, final boolean isInsert)
+        final int entryIndex, final boolean isInsert, final int hashValue)
     {
         setValueLength(entryIndex, value.length(), dataBuffer);
         final int keyOffset = keyOffset(entryIndex);
@@ -171,6 +175,7 @@ public final class CharSequenceMap
             dataBuffer.putInt(keyOffset + (i * Integer.BYTES), value.charAt(i));
         }
         setId(entryIndex, id, dataBuffer);
+        setHash(entryIndex, hashValue, dataBuffer);
         if (isInsert)
         {
             liveEntryCount++;
@@ -215,7 +220,8 @@ public final class CharSequenceMap
 
     private long search(final CharSequence value, final EntryHandler entryHandler)
     {
-        int entryIndex = (hash.applyAsInt(value) & entryMask);
+        final int hashValue = hash.applyAsInt(value);
+        int entryIndex = (hashValue & entryMask);
         int entry = 0;
         while (entry < totalEntryCount)
         {
@@ -227,11 +233,19 @@ public final class CharSequenceMap
             boolean matches = true;
 
             final int keyOffset = keyOffset(entryIndex);
-            for (int i = 0; i < value.length(); i++)
+            final int hash = getHash(entryIndex, dataBuffer);
+            if (hash != hashValue)
             {
-                if (dataBuffer.getInt(keyOffset + i * Integer.BYTES) != value.charAt(i))
+                matches = false;
+            }
+            else
+            {
+                for (int i = 0; i < value.length(); i++)
                 {
-                    matches = false;
+                    if (dataBuffer.getInt(keyOffset + i * Integer.BYTES) != value.charAt(i))
+                    {
+                        matches = false;
+                    }
                 }
             }
             if (matches)
@@ -254,9 +268,14 @@ public final class CharSequenceMap
         void onEntryFound(ByteBuffer dataBuffer, int index);
     }
 
-    private boolean isExistingEntryAt(final CharSequence value, final int entryIndex)
+    private boolean isExistingEntryAt(final CharSequence value, final int entryIndex, final int hashValue)
     {
         final int keyOffset = keyOffset(entryIndex);
+        final int hash = getHash(entryIndex, dataBuffer);
+        if (hash != hashValue)
+        {
+            return false;
+        }
         for (int i = 0; i < value.length(); i++)
         {
             if (dataBuffer.getInt(keyOffset + (i * Integer.BYTES)) != value.charAt(i))
@@ -299,17 +318,27 @@ public final class CharSequenceMap
 
     private void setId(final int entryIndex, final long id, final ByteBuffer dataBuffer)
     {
-        dataBuffer.putLong(byteOffset(entryIndex) + Integer.BYTES, id);
+        dataBuffer.putLong(byteOffset(entryIndex) + ID_OFFSET, id);
     }
 
     private long getId(final int entryIndex, final ByteBuffer dataBuffer)
     {
-        return dataBuffer.getLong(byteOffset(entryIndex) + Integer.BYTES);
+        return dataBuffer.getLong(byteOffset(entryIndex) + ID_OFFSET);
+    }
+
+    private void setHash(final int entryIndex, final int hashValue, final ByteBuffer dataBuffer)
+    {
+        dataBuffer.putInt(byteOffset(entryIndex) + HASH_OFFSET, hashValue);
+    }
+
+    private int getHash(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return dataBuffer.getInt(byteOffset(entryIndex) + HASH_OFFSET);
     }
 
     private int keyOffset(final int entryIndex)
     {
-        return byteOffset(entryIndex) + Integer.BYTES * 3;
+        return byteOffset(entryIndex) + KEY_OFFSET;
     }
 
     private static final class CharArrayCharSequence implements CharSequence
