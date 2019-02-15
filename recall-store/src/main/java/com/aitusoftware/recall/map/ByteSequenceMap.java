@@ -28,6 +28,9 @@ import org.agrona.BitUtil;
  */
 public final class ByteSequenceMap
 {
+    private static final int ID_OFFSET = Integer.BYTES;
+    private static final int KEY_OFFSET = Integer.BYTES * 4;
+    private static final int HASH_OFFSET = Integer.BYTES * 3;
     private final ToIntFunction<ByteBuffer> hash;
     private final float loadFactor = 0.7f;
     private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
@@ -85,11 +88,12 @@ public final class ByteSequenceMap
         {
             rehash(true);
         }
-        final int entryIndex = (hash.applyAsInt(value) & entryMask);
-        final boolean existingEntryAt = isExistingEntryAt(value, entryIndex);
+        final int hashValue = hash.applyAsInt(value);
+        final int entryIndex = (hashValue & entryMask);
+        final boolean existingEntryAt = isExistingEntryAt(value, entryIndex, hashValue);
         if (!isValuePresent(entryIndex, dataBuffer) || existingEntryAt)
         {
-            insertEntry(value, id, entryIndex, !existingEntryAt);
+            insertEntry(value, id, entryIndex, !existingEntryAt, hashValue);
         }
         else
         {
@@ -100,10 +104,10 @@ public final class ByteSequenceMap
                 {
                     candidateIndex -= totalEntryCount;
                 }
-                final boolean innerExistingEntryAt = isExistingEntryAt(value, candidateIndex);
+                final boolean innerExistingEntryAt = isExistingEntryAt(value, candidateIndex, hashValue);
                 if (!isValuePresent(candidateIndex, dataBuffer) || innerExistingEntryAt)
                 {
-                    insertEntry(value, id, candidateIndex, !innerExistingEntryAt);
+                    insertEntry(value, id, candidateIndex, !innerExistingEntryAt, hashValue);
                     return;
                 }
             }
@@ -154,7 +158,8 @@ public final class ByteSequenceMap
 
     private long search(final ByteBuffer value, final EntryHandler entryHandler)
     {
-        int entryIndex = (hash.applyAsInt(value) & entryMask);
+        final int hashValue = hash.applyAsInt(value);
+        int entryIndex = (hashValue & entryMask);
         int entry = 0;
         while (entry < totalEntryCount)
         {
@@ -165,12 +170,19 @@ public final class ByteSequenceMap
 
             boolean matches = true;
             final int keyOffset = keyOffset(entryIndex);
-            for (int i = 0; i < value.remaining(); i++)
+            if (hashValue != getHash(entryIndex, dataBuffer))
             {
-                if (dataBuffer.get(keyOffset + i) != value.get(value.position() + (i)))
+                matches = false;
+            }
+            else
+            {
+                for (int i = 0; i < value.remaining(); i++)
                 {
-                    matches = false;
-                    break;
+                    if (dataBuffer.get(keyOffset + i) != value.get(value.position() + (i)))
+                    {
+                        matches = false;
+                        break;
+                    }
                 }
             }
             if (matches)
@@ -227,7 +239,7 @@ public final class ByteSequenceMap
 
     private void insertEntry(
         final ByteBuffer value, final long id,
-        final int entryIndex, final boolean isInsert)
+        final int entryIndex, final boolean isInsert, final int hashValue)
     {
         setValueLength(entryIndex, value.remaining(), dataBuffer);
         final int keyOffset = keyOffset(entryIndex);
@@ -236,15 +248,20 @@ public final class ByteSequenceMap
             dataBuffer.put(keyOffset + (i), value.get(i + value.position()));
         }
         setId(entryIndex, id, dataBuffer);
+        setHash(entryIndex, hashValue, dataBuffer);
         if (isInsert)
         {
             liveEntryCount++;
         }
     }
 
-    private boolean isExistingEntryAt(final ByteBuffer value, final int entryIndex)
+    private boolean isExistingEntryAt(final ByteBuffer value, final int entryIndex, final int hashValue)
     {
         final int keyOffset = keyOffset(entryIndex);
+        if (hashValue != getHash(entryIndex, dataBuffer))
+        {
+            return false;
+        }
         for (int i = 0; i < value.remaining(); i++)
         {
             if (dataBuffer.get(keyOffset + (i)) != value.get(value.position() + i))
@@ -288,17 +305,27 @@ public final class ByteSequenceMap
 
     private void setId(final int entryIndex, final long id, final ByteBuffer dataBuffer)
     {
-        dataBuffer.putLong(byteOffset(entryIndex) + Integer.BYTES, id);
+        dataBuffer.putLong(byteOffset(entryIndex) + ID_OFFSET, id);
     }
 
     private long getId(final int entryIndex, final ByteBuffer dataBuffer)
     {
-        return dataBuffer.getLong(byteOffset(entryIndex) + Integer.BYTES);
+        return dataBuffer.getLong(byteOffset(entryIndex) + ID_OFFSET);
+    }
+
+    private void setHash(final int entryIndex, final int hash, final ByteBuffer dataBuffer)
+    {
+        dataBuffer.putInt(byteOffset(entryIndex) + HASH_OFFSET, hash);
+    }
+
+    private long getHash(final int entryIndex, final ByteBuffer dataBuffer)
+    {
+        return dataBuffer.getInt(byteOffset(entryIndex) + HASH_OFFSET);
     }
 
     private int keyOffset(final int entryIndex)
     {
-        return byteOffset(entryIndex) + Integer.BYTES * 3;
+        return byteOffset(entryIndex) + KEY_OFFSET;
     }
 
     private class RemoveEntryHandler implements EntryHandler
