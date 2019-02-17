@@ -34,7 +34,8 @@ public final class CharSequenceMap
     private final ToIntFunction<CharSequence> hash;
     private final CharArrayCharSequence charBuffer = new CharArrayCharSequence();
     private final float loadFactor = 0.7f;
-    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
+    // TODO allow user to supply buffer factory
+    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocateDirect;
     private final long missingValue;
     private final int maxKeyLength;
     private final RemoveEntryHandler removeEntryHandler;
@@ -70,7 +71,12 @@ public final class CharSequenceMap
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         entryMask = totalEntryCount - 1;
         entrySizeInBytes = (maxKeyLength * Character.BYTES) + (4 * Integer.BYTES);
-        dataBuffer = bufferFactory.apply(entrySizeInBytes * totalEntryCount);
+        final long bufferSize = entrySizeInBytes * totalEntryCount;
+        if (bufferSize > Integer.MAX_VALUE || totalEntryCount < 0)
+        {
+            throw new IllegalArgumentException("Requested buffer size too large");
+        }
+        dataBuffer = bufferFactory.apply((int)bufferSize);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         this.maxKeyLength = maxKeyLength;
         this.hash = hash;
@@ -194,7 +200,15 @@ public final class CharSequenceMap
 
         if (shouldResize)
         {
-            dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
+            final int newSize = oldBuffer.capacity() * 2;
+            if (newSize < 0)
+            {
+                throw new IllegalStateException(
+                    String.format(
+                        "Maximum map capacity exceeded. Entry count: %d, entrySize: %d, newSize: %d",
+                        size(), entrySizeInBytes, ((long)oldBuffer.capacity()) * 2));
+            }
+            dataBuffer = bufferFactory.apply(newSize);
             totalEntryCount *= 2;
             entryMask = totalEntryCount - 1;
             entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);

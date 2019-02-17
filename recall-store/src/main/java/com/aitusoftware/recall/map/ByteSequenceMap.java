@@ -65,7 +65,12 @@ public final class ByteSequenceMap
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         entryMask = totalEntryCount - 1;
         entrySizeInBytes = (maxKeyLength + Integer.BYTES + Long.BYTES);
-        dataBuffer = bufferFactory.apply(entrySizeInBytes * totalEntryCount);
+        final long bufferSize = entrySizeInBytes * totalEntryCount;
+        if (bufferSize > Integer.MAX_VALUE || totalEntryCount < 0)
+        {
+            throw new IllegalArgumentException("Requested buffer size too large");
+        }
+        dataBuffer = bufferFactory.apply((int)bufferSize);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         this.hash = hash;
         this.missingValue = missingValue;
@@ -209,9 +214,18 @@ public final class ByteSequenceMap
     {
         final ByteBuffer oldBuffer = dataBuffer;
         final int oldEntryCount = totalEntryCount;
+        final int newSize = oldBuffer.capacity() * 2;
+        if (newSize < 0)
+        {
+            throw new IllegalStateException(
+                String.format(
+                    "Maximum map capacity exceeded. Entry count: %d, entrySize: %d, newSize: %d",
+                    size(), entrySizeInBytes, ((long)oldBuffer.capacity()) * 2));
+        }
+
         if (shouldResize)
         {
-            dataBuffer = bufferFactory.apply(oldBuffer.capacity() * 2);
+            dataBuffer = bufferFactory.apply(newSize);
             totalEntryCount *= 2;
             entryMask = totalEntryCount - 1;
             entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);

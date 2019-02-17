@@ -18,6 +18,7 @@
 package com.aitusoftware.recall.map;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -197,6 +198,48 @@ class CharSequenceMapTest
             map.put("key_" + (i % 10), i);
             assertThat(map.size()).isAtMost(10);
         }
+    }
+
+    @Disabled("Requires more RAM than that provided by Travis container")
+    @Test
+    void shouldUseFullBufferCapactity()
+    {
+        final int perRecordOverhead = 4 * Integer.BYTES;
+        final int maxKeyLength = 128;
+        final int recordLength = perRecordOverhead + maxKeyLength;
+        long maxBufferSize = recordLength * 8;
+        while ((maxBufferSize * 2) < (long)Integer.MAX_VALUE)
+        {
+            maxBufferSize = maxBufferSize << 1;
+        }
+        maxBufferSize /= 2;
+
+        final int maxRecordableValues =
+            (int)((((int)maxBufferSize) / (perRecordOverhead + maxKeyLength) - 1) * 0.7f);
+        final CharSequenceMap largeMap = new CharSequenceMap(
+            maxKeyLength, maxRecordableValues / 4, Long.MIN_VALUE);
+
+        for (int i = 0; i < maxRecordableValues; i++)
+        {
+            largeMap.put(Integer.toString(i), i);
+        }
+
+        Assertions.assertThrows(IllegalStateException.class, () ->
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                largeMap.put(Integer.toString(i + maxRecordableValues), i);
+            }
+        });
+    }
+
+    @Test
+    void shouldBlowUpIfInitialAllocationIsTooLarge()
+    {
+        Assertions.assertThrows(IllegalArgumentException.class, () ->
+        {
+            new CharSequenceMap(64, Integer.MAX_VALUE, Long.MIN_VALUE);
+        });
     }
 
     private void assertSearchResult(final CharSequenceMap index, final String searchTerm, final long retrievedId)
