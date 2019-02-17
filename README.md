@@ -18,7 +18,7 @@ mutator methods for any fields that need to be serialised.
 
 ```
 dependencies {
-    compile group: 'com.aitusoftware', name: 'recall-store', version: '0.1.0'
+    compile group: 'com.aitusoftware', name: 'recall-store', version: '0.2.0'
 }
 ```
 
@@ -28,7 +28,7 @@ dependencies {
 <dependency>
     <groupId>com.aitusoftware</groupId>
     <artifactId>recall-store</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
@@ -172,7 +172,7 @@ public void receiveCar(ReadableByteChannel channel) {
   channel.read(inputData);
   inputData.flip();
   buffer.wrap(inputData);
-  decoder.wrap(buffer, 0, blockLength, version);
+  decoder.wrap(buffer, 0, BLOCK_LENGTH, VERSION);
 
   dispatchCarReceivedEvent(decoder);
   messageStore.store(decoder);
