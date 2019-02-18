@@ -244,25 +244,7 @@ public final class CharSequenceMap
                 break;
             }
 
-            boolean matches = true;
-
-            final int keyOffset = keyOffset(entryIndex);
-            final int hash = getHash(entryIndex, dataBuffer);
-            if (hash != hashValue)
-            {
-                matches = false;
-            }
-            else
-            {
-                for (int i = 0; i < value.length(); i++)
-                {
-                    if (dataBuffer.getChar(keyOffset + i * Character.BYTES) != value.charAt(i))
-                    {
-                        matches = false;
-                    }
-                }
-            }
-            if (matches)
+            if (isExistingEntryAt(value, entryIndex, getHash(entryIndex, dataBuffer)))
             {
                 final long storedId = getId(entryIndex, dataBuffer);
                 entryHandler.onEntryFound(dataBuffer, entryIndex);

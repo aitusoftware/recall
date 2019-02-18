@@ -174,24 +174,7 @@ public final class ByteSequenceMap
                 break;
             }
 
-            boolean matches = true;
-            final int keyOffset = keyOffset(entryIndex);
-            if (hashValue != getHash(entryIndex, dataBuffer))
-            {
-                matches = false;
-            }
-            else
-            {
-                for (int i = 0; i < value.remaining(); i++)
-                {
-                    if (dataBuffer.get(keyOffset + i) != value.get(value.position() + (i)))
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-            }
-            if (matches)
+            if (isExistingEntryAt(value, entryIndex, getHash(entryIndex, dataBuffer)))
             {
                 final long storedId = getId(entryIndex, dataBuffer);
                 entryHandler.onEntryFound(dataBuffer, entryIndex);
@@ -333,7 +316,7 @@ public final class ByteSequenceMap
         dataBuffer.putInt(byteOffset(entryIndex) + HASH_OFFSET, hash);
     }
 
-    private long getHash(final int entryIndex, final ByteBuffer dataBuffer)
+    private int getHash(final int entryIndex, final ByteBuffer dataBuffer)
     {
         return dataBuffer.getInt(byteOffset(entryIndex) + HASH_OFFSET);
     }
