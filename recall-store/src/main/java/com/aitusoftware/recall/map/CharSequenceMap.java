@@ -72,7 +72,7 @@ public final class CharSequenceMap implements SequenceMap<CharSequence>
         entryMask = totalEntryCount - 1;
         entrySizeInBytes = (maxKeyLength * Character.BYTES) + (4 * Integer.BYTES);
         final long bufferSize = entrySizeInBytes * totalEntryCount;
-        if (bufferSize > Integer.MAX_VALUE || totalEntryCount < 0)
+        if (bufferSize > ((long)Integer.MAX_VALUE) || totalEntryCount < 0)
         {
             throw new IllegalArgumentException("Requested buffer size too large");
         }
