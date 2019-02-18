@@ -17,16 +17,16 @@
  */
 package com.aitusoftware.recall.map;
 
+import org.agrona.BitUtil;
+
 import java.nio.ByteBuffer;
 import java.util.function.IntFunction;
 import java.util.function.ToIntFunction;
 
-import org.agrona.BitUtil;
-
 /**
  * Map for storing a byte-sequence against a <code>long</code> value.
  */
-public final class ByteSequenceMap
+public final class ByteSequenceMap implements SequenceMap<ByteBuffer>
 {
     private static final int ID_OFFSET = Integer.BYTES;
     private static final int KEY_OFFSET = Integer.BYTES * 4;
@@ -79,10 +79,7 @@ public final class ByteSequenceMap
     }
 
     /**
-     * Insert a value into the map.
-     *
-     * @param value value to use as a key
-     * @param id    id to store
+     * {@inheritDoc}.
      */
     public void put(final ByteBuffer value, final long id)
     {
@@ -123,10 +120,7 @@ public final class ByteSequenceMap
     }
 
     /**
-     * Searches the map for a given key.
-     *
-     * @param value the key to search for
-     * @return the retrieved value or {@code missingValue} if it was not found
+     * {@inheritDoc}.
      */
     public long get(final ByteBuffer value)
     {
@@ -134,10 +128,7 @@ public final class ByteSequenceMap
     }
 
     /**
-     * Removes an entry for a given key.
-     *
-     * @param value the key to search for
-     * @return the stored value, or {@code missingValue} if the key was not present
+     * {@inheritDoc}.
      */
     public long remove(final ByteBuffer value)
     {
@@ -145,9 +136,7 @@ public final class ByteSequenceMap
     }
 
     /**
-     * Returns the number of entries in the map.
-     *
-     * @return the number of entries
+     * {@inheritDoc}.
      */
     public int size()
     {
@@ -155,7 +144,7 @@ public final class ByteSequenceMap
     }
 
     /**
-     * Allocates a new buffer of the same size, and copies existing entries into it.
+     * {@inheritDoc}.
      */
     public void rehash()
     {

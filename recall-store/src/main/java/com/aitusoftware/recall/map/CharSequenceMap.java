@@ -26,7 +26,7 @@ import java.util.function.ToIntFunction;
 /**
  * Map for storing a char-sequence against a <code>long</code> value.
  */
-public final class CharSequenceMap
+public final class CharSequenceMap implements SequenceMap<CharSequence>
 {
     private static final int KEY_OFFSET = Integer.BYTES * 4;
     private static final int HASH_OFFSET = Integer.BYTES * 3;
@@ -85,10 +85,7 @@ public final class CharSequenceMap
     }
 
     /**
-     * Insert a value into the map.
-     *
-     * @param value value to use as a key
-     * @param id    id to store
+     * {@inheritDoc}.
      */
     public void put(final CharSequence value, final long id)
     {
@@ -131,10 +128,7 @@ public final class CharSequenceMap
     }
 
     /**
-     * Searches the map for a given key.
-     *
-     * @param value the key to search for
-     * @return the retrieved value, or {@code missingValue} if it was not present
+     * {@inheritDoc}.
      */
     public long get(final CharSequence value)
     {
@@ -142,10 +136,7 @@ public final class CharSequenceMap
     }
 
     /**
-     * Removes an entry for a given key.
-     *
-     * @param value the key to search for
-     * @return the stored value, or {@code missingValue} if the key was not present
+     * {@inheritDoc}.
      */
     public long remove(final CharSequence value)
     {
@@ -153,9 +144,7 @@ public final class CharSequenceMap
     }
 
     /**
-     * Returns the number of entries in the map.
-     *
-     * @return the number of entries
+     * {@inheritDoc}.
      */
     public int size()
     {
@@ -163,7 +152,7 @@ public final class CharSequenceMap
     }
 
     /**
-     * Allocates a new buffer and copies existing entries to it.
+     * {@inheritDoc}.
      */
     public void rehash()
     {
