@@ -65,7 +65,7 @@ public final class ByteSequenceMap implements SequenceMap<ByteBuffer>
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         entryMask = totalEntryCount - 1;
         entrySizeInBytes = (maxKeyLength + Integer.BYTES + Long.BYTES);
-        final long bufferSize = entrySizeInBytes * totalEntryCount;
+        final long bufferSize = entrySizeInBytes * (long)totalEntryCount;
         if (bufferSize > ((long)Integer.MAX_VALUE) || totalEntryCount < 0)
         {
             throw new IllegalArgumentException("Requested buffer size too large");
