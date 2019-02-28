@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -64,7 +65,8 @@ class CharSequenceMapTest
     @Test
     void shouldRetrieveMultipleValuesWhenHashesCollide()
     {
-        final CharSequenceMap poorIndex = new CharSequenceMap(16, 10, cs -> 7, Long.MIN_VALUE);
+        final CharSequenceMap poorIndex =
+            new CharSequenceMap(16, 10, cs -> 7, Long.MIN_VALUE, ByteBuffer::allocateDirect);
 
         final String otherTerm = "otherTerm";
         final long otherId = 99L;

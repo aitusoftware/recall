@@ -33,7 +33,7 @@ public final class ByteSequenceMap implements SequenceMap<ByteBuffer>
     private static final int HASH_OFFSET = Integer.BYTES * 3;
     private final ToIntFunction<ByteBuffer> hash;
     private final float loadFactor = 0.7f;
-    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocate;
+    private final IntFunction<ByteBuffer> bufferFactory;
     private final long missingValue;
     private final int maxKeyLength;
     private final EntryHandler getEntryHandler = (b, i) -> {};
@@ -55,12 +55,30 @@ public final class ByteSequenceMap implements SequenceMap<ByteBuffer>
      */
     public ByteSequenceMap(final int maxKeyLength, final int initialSize, final long missingValue)
     {
-        this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash, missingValue);
+        this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash,
+            missingValue, ByteBuffer::allocateDirect);
+    }
+
+    /**
+     * Constructor for the map.
+     *
+     * @param maxKeyLength  max length of any key
+     * @param initialSize   initial size of the map
+     * @param missingValue  initial size of the map
+     * @param bufferFactory factory method for creating new {@code ByteBuffer} instances
+     */
+    public ByteSequenceMap(
+        final int maxKeyLength, final int initialSize,
+        final long missingValue, final IntFunction<ByteBuffer> bufferFactory)
+    {
+        this(maxKeyLength, initialSize, ByteSequenceMap::defaultHash,
+            missingValue, bufferFactory);
     }
 
     ByteSequenceMap(
         final int maxKeyLength, final int initialSize,
-        final ToIntFunction<ByteBuffer> hash, final long missingValue)
+        final ToIntFunction<ByteBuffer> hash, final long missingValue,
+        final IntFunction<ByteBuffer> bufferFactory)
     {
         totalEntryCount = BitUtil.findNextPositivePowerOfTwo(initialSize);
         entryMask = totalEntryCount - 1;
@@ -70,7 +88,8 @@ public final class ByteSequenceMap implements SequenceMap<ByteBuffer>
         {
             throw new IllegalArgumentException("Requested buffer size too large");
         }
-        dataBuffer = bufferFactory.apply((int)bufferSize);
+        this.bufferFactory = bufferFactory;
+        dataBuffer = this.bufferFactory.apply((int)bufferSize);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         this.hash = hash;
         this.missingValue = missingValue;

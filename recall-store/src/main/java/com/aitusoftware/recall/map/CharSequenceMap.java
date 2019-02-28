@@ -34,8 +34,7 @@ public final class CharSequenceMap implements SequenceMap<CharSequence>
     private final ToIntFunction<CharSequence> hash;
     private final CharArrayCharSequence charBuffer = new CharArrayCharSequence();
     private final float loadFactor = 0.7f;
-    // TODO allow user to supply buffer factory
-    private final IntFunction<ByteBuffer> bufferFactory = ByteBuffer::allocateDirect;
+    private final IntFunction<ByteBuffer> bufferFactory;
     private final long missingValue;
     private final int maxKeyLength;
     private final RemoveEntryHandler removeEntryHandler;
@@ -57,12 +56,30 @@ public final class CharSequenceMap implements SequenceMap<CharSequence>
      */
     public CharSequenceMap(final int maxKeyLength, final int initialSize, final long missingValue)
     {
-        this(maxKeyLength, initialSize, CharSequenceMap::defaultHash, missingValue);
+        this(maxKeyLength, initialSize, CharSequenceMap::defaultHash,
+            missingValue, ByteBuffer::allocateDirect);
+    }
+
+    /**
+     * Constructor for the map.
+     *
+     * @param maxKeyLength  max length of any key
+     * @param initialSize   initial size of the map
+     * @param missingValue  value to return if the key is not present
+     * @param bufferFactory factory method for creating new {@code ByteBuffer} instances
+     */
+    public CharSequenceMap(
+        final int maxKeyLength, final int initialSize,
+        final long missingValue, final IntFunction<ByteBuffer> bufferFactory)
+    {
+        this(maxKeyLength, initialSize, CharSequenceMap::defaultHash,
+            missingValue, bufferFactory);
     }
 
     CharSequenceMap(
         final int maxKeyLength, final int initialSize,
-        final ToIntFunction<CharSequence> hash, final long missingValue)
+        final ToIntFunction<CharSequence> hash, final long missingValue,
+        final IntFunction<ByteBuffer> bufferFactory)
     {
         if (maxKeyLength > (1 << 28))
         {
@@ -76,7 +93,8 @@ public final class CharSequenceMap implements SequenceMap<CharSequence>
         {
             throw new IllegalArgumentException("Requested buffer size too large");
         }
-        dataBuffer = bufferFactory.apply((int)bufferSize);
+        this.bufferFactory = bufferFactory;
+        dataBuffer = this.bufferFactory.apply((int)bufferSize);
         entryCountToTriggerRehash = (int)(loadFactor * totalEntryCount);
         this.maxKeyLength = maxKeyLength;
         this.hash = hash;

@@ -66,7 +66,8 @@ class ByteSequenceMapTest
     @Test
     void shouldRetrieveMultipleValuesWhenHashesCollide()
     {
-        final ByteSequenceMap poorIndex = new ByteSequenceMap(16, 10, cs -> 7, Long.MIN_VALUE);
+        final ByteSequenceMap poorIndex =
+            new ByteSequenceMap(16, 10, cs -> 7, Long.MIN_VALUE, ByteBuffer::allocate);
 
         final ByteBuffer otherTerm = toBuffer("otherTerm");
         final long otherId = 99L;
