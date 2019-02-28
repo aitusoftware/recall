@@ -27,35 +27,28 @@ final class Header
     private static final int STORE_LENGTH_OFFSET = Integer.BYTES;
     private static final int RECORD_LENGTH_OFFSET = 2 * Integer.BYTES;
     private static final int WRITE_OFFSET_OFFSET = 3 * Integer.BYTES;
+    private static final ByteOrder STORAGE_ORDER = ByteOrder.LITTLE_ENDIAN;
 
     private Version version;
     private int storeLength;
     private int maxRecordLength;
     private int nextWriteOffset;
 
-    <B> void readFrom(final B input, final BufferOps<B> bufferOps, final int offset)
+    void readFrom(final ByteBuffer headerBuffer)
     {
-        version = Version.from(bufferOps.readInt(input, offset + VERSION_OFFSET));
-        storeLength = bufferOps.readInt(input, offset + STORE_LENGTH_OFFSET);
-        maxRecordLength = bufferOps.readInt(input, offset + RECORD_LENGTH_OFFSET);
-        nextWriteOffset = bufferOps.readInt(input, offset + WRITE_OFFSET_OFFSET);
-    }
-
-    void readFrom(final ByteBuffer headerBuffer, final ByteOrder byteOrder)
-    {
-        // TODO Agrona stores values in little-endian, make bytebuffer do the same
-        version = Version.from(headerBuffer.order(byteOrder).getInt(VERSION_OFFSET));
-        storeLength = headerBuffer.order(byteOrder).getInt(STORE_LENGTH_OFFSET);
-        maxRecordLength = headerBuffer.order(byteOrder).getInt(RECORD_LENGTH_OFFSET);
-        nextWriteOffset = headerBuffer.order(byteOrder).getInt(WRITE_OFFSET_OFFSET);
+        version = Version.from(headerBuffer.order(STORAGE_ORDER).getInt(VERSION_OFFSET));
+        storeLength = headerBuffer.order(STORAGE_ORDER).getInt(STORE_LENGTH_OFFSET);
+        maxRecordLength = headerBuffer.order(STORAGE_ORDER).getInt(RECORD_LENGTH_OFFSET);
+        nextWriteOffset = headerBuffer.order(STORAGE_ORDER).getInt(WRITE_OFFSET_OFFSET);
     }
 
     <B> void writeTo(final B input, final BufferOps<B> bufferOps, final int offset)
     {
-        bufferOps.writeInt(input, offset + VERSION_OFFSET, version.getVersionNumber());
-        bufferOps.writeInt(input, offset + STORE_LENGTH_OFFSET, storeLength);
-        bufferOps.writeInt(input, offset + RECORD_LENGTH_OFFSET, maxRecordLength);
-        bufferOps.writeInt(input, offset + WRITE_OFFSET_OFFSET, nextWriteOffset);
+        final ByteOrder bufferOrder = bufferOps.byteOrder();
+        bufferOps.writeInt(input, offset + VERSION_OFFSET, littleEndian(version.getVersionNumber(), bufferOrder));
+        bufferOps.writeInt(input, offset + STORE_LENGTH_OFFSET, littleEndian(storeLength, bufferOrder));
+        bufferOps.writeInt(input, offset + RECORD_LENGTH_OFFSET, littleEndian(maxRecordLength, bufferOrder));
+        bufferOps.writeInt(input, offset + WRITE_OFFSET_OFFSET, littleEndian(nextWriteOffset, bufferOrder));
     }
 
     Version version()
@@ -100,5 +93,10 @@ final class Header
     {
         this.nextWriteOffset = nextWriteOffset;
         return this;
+    }
+
+    private static int littleEndian(final int value, final ByteOrder byteOrder)
+    {
+        return byteOrder == ByteOrder.LITTLE_ENDIAN ? value : Integer.reverseBytes(value);
     }
 }

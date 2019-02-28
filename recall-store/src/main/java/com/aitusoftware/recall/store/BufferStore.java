@@ -114,7 +114,7 @@ public final class BufferStore<B> implements Store<B>
         }
         headerBuffer.flip();
         final Header header = new Header();
-        header.readFrom(headerBuffer, bufferOps.byteOrder());
+        header.readFrom(headerBuffer);
 
         final B buffer = bufferOps.createFrom(input, 0, header.storeLength() + Header.LENGTH);
         return new BufferStore<>(bufferFactory, bufferOps, buffer, header);
