@@ -157,7 +157,7 @@ class CharSequenceMapTest
             if ((counter++ & 7) == 0)
             {
                 final long controlValue = control.remove(controlKey);
-                assertThat(map.remove(controlKey)).named("key %s failed", controlKey)
+                assertThat(map.remove(controlKey))
                     .isEqualTo(controlValue);
             }
         }

@@ -5,6 +5,12 @@ apply plugin: 'java'
 def recallVersion = file('version.txt').text.trim()
 group = 'com.aitusoftware'
 
+def agronaVersion = '1.5.1'
+def sbeVersion = '1.18.2'
+def checkstyleVersion = '8.33'
+
+defaultTasks ('check')
+
 ext {
     fullName = 'Recall'
     fullDescription = 'Recall: An off-heap garbage-free object store'
@@ -82,15 +88,15 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.11'
-        testCompile group: 'com.google.truth', name: 'truth', version: '0.42'
-        testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.2'
-        testCompile 'org.junit.jupiter:junit-jupiter-engine:5.3.2'
+        checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
+        testCompile group: 'com.google.truth', name: 'truth', version: '1.0.1'
+        testCompile 'org.junit.jupiter:junit-jupiter-api:5.6.2'
+        testCompile 'org.junit.jupiter:junit-jupiter-engine:5.6.2'
     }
 
     checkstyle {
         configFile = new File(project.rootDir, 'config/checkstyle.xml')
-        toolVersion = '8.11'
+        toolVersion = "${checkstyleVersion}"
     }
 
     license {
@@ -124,7 +130,7 @@ subprojects {
 
 project(':recall-store') {
     dependencies {
-        compile 'org.agrona:agrona:0.9.28'
+        compile "org.agrona:agrona:${agronaVersion}"
     }
 
     uploadArchives {
@@ -142,9 +148,9 @@ project(':recall-store') {
 
 project(':recall-sbe') {
     dependencies {
-        compile group: 'uk.co.real-logic', name: 'sbe-all', version: '1.10.2'
+        compile "uk.co.real-logic:sbe-all:${sbeVersion}"
         compile project(':recall-store')
-        compile 'org.agrona:agrona:0.9.28'
+        compile "org.agrona:agrona:${agronaVersion}"
     }
 
     File generatedSrcDir = file("${buildDir}/generated-sources/java")

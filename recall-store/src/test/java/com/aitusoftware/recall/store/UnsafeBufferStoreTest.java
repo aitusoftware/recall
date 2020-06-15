@@ -134,7 +134,7 @@ class UnsafeBufferStoreTest
         for (int i = 0; i <= INITIAL_RECORDS; i++)
         {
             assertThat(store.load(i, transcoder, Order.of(-1)))
-                .named("Loading %d", i).isTrue();
+                .isTrue();
         }
     }
 
@@ -164,7 +164,7 @@ class UnsafeBufferStoreTest
 
         for (int i = 1; i < INITIAL_RECORDS; i += 2)
         {
-            assertThat(store.load(i, transcoder, container)).named("Did not find element %d", i).isTrue();
+            assertThat(store.load(i, transcoder, container)).isTrue();
         }
         for (int i = 0; i < (INITIAL_RECORDS / 2); i++)
         {

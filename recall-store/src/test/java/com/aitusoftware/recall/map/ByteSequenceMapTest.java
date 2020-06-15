@@ -150,7 +150,7 @@ class ByteSequenceMapTest
             control.put(key, value);
             map.put(toBuffer(key), value);
 
-            assertThat(map.get(toBuffer(key))).named("seed: %d", seed).isEqualTo(control.get(key));
+            assertThat(map.get(toBuffer(key))).isEqualTo(control.get(key));
         }
 
         assertThat(map.size()).isEqualTo(10_000);
@@ -162,7 +162,7 @@ class ByteSequenceMapTest
             if ((counter++ & 7) == 0)
             {
                 assertThat(map.remove(toBuffer(controlKey)))
-                    .named("seed: %d", seed).isEqualTo(control.remove(controlKey));
+                    .isEqualTo(control.remove(controlKey));
             }
         }
 
@@ -171,7 +171,7 @@ class ByteSequenceMapTest
         controlKeys = new HashSet<>(control.keySet());
         for (final String controlKey : controlKeys)
         {
-            assertThat(map.get(toBuffer(controlKey))).named("seed: %d", seed).isEqualTo(control.get(controlKey));
+            assertThat(map.get(toBuffer(controlKey))).isEqualTo(control.get(controlKey));
         }
 
         for (int i = 0; i < 10_000; i++)
@@ -185,7 +185,7 @@ class ByteSequenceMapTest
         controlKeys = new HashSet<>(control.keySet());
         for (final String controlKey : controlKeys)
         {
-            assertThat(map.get(toBuffer(controlKey))).named("seed: %d", seed).isEqualTo(control.get(controlKey));
+            assertThat(map.get(toBuffer(controlKey))).isEqualTo(control.get(controlKey));
         }
 
         map.rehash();
