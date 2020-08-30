@@ -5,8 +5,8 @@ apply plugin: 'java'
 def recallVersion = file('version.txt').text.trim()
 group = 'com.aitusoftware'
 
-def agronaVersion = '1.5.1'
-def sbeVersion = '1.18.2'
+def agronaVersion = '1.6.0'
+def sbeVersion = '1.19.0'
 def checkstyleVersion = '8.33'
 
 defaultTasks ('check')
