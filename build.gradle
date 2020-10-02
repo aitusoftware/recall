@@ -5,10 +5,6 @@ apply plugin: 'java'
 def recallVersion = file('version.txt').text.trim()
 group = 'com.aitusoftware'
 
-def agronaVersion = '1.6.0'
-def sbeVersion = '1.19.0'
-def checkstyleVersion = '8.33'
-
 defaultTasks ('check')
 
 ext {
@@ -88,15 +84,15 @@ subprojects {
     }
 
     dependencies {
-        checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
-        testCompile group: 'com.google.truth', name: 'truth', version: '1.0.1'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.36.2'
+        testCompile 'com.google.truth:truth:1.0.1'
         testCompile 'org.junit.jupiter:junit-jupiter-api:5.6.2'
         testCompile 'org.junit.jupiter:junit-jupiter-engine:5.6.2'
     }
 
     checkstyle {
         configFile = new File(project.rootDir, 'config/checkstyle.xml')
-        toolVersion = "${checkstyleVersion}"
+        toolVersion = '8.36.2'
     }
 
     license {
@@ -130,7 +126,7 @@ subprojects {
 
 project(':recall-store') {
     dependencies {
-        compile "org.agrona:agrona:${agronaVersion}"
+        compile "org.agrona:agrona:1.7.2"
     }
 
     uploadArchives {
@@ -148,9 +144,9 @@ project(':recall-store') {
 
 project(':recall-sbe') {
     dependencies {
-        compile "uk.co.real-logic:sbe-all:${sbeVersion}"
+        compile "uk.co.real-logic:sbe-all:1.20.2"
         compile project(':recall-store')
-        compile "org.agrona:agrona:${agronaVersion}"
+        compile "org.agrona:agrona:1.7.2"
     }
 
     File generatedSrcDir = file("${buildDir}/generated-sources/java")
