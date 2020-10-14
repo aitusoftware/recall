@@ -144,7 +144,7 @@ project(':recall-store') {
 
 project(':recall-sbe') {
     dependencies {
-        compile "uk.co.real-logic:sbe-all:1.20.2"
+        compile "uk.co.real-logic:sbe-all:1.20.3"
         compile project(':recall-store')
         compile "org.agrona:agrona:1.7.2"
     }
