@@ -298,7 +298,7 @@ class ByteBufferStoreTest
     void shouldBlowUpIfVersionIsUnknown() throws IOException
     {
         store.store(transcoder, Order.of(17), idAccessor);
-        final File tempFile = File.createTempFile("BufferStoreTest", "bin");
+        final File tempFile = Files.createTempFile("BufferStoreTest", "bin").toFile();
         store.writeTo(FileChannel.open(tempFile.toPath(), WRITE));
 
         final FileChannel serialisedStore = FileChannel.open(tempFile.toPath(), READ, WRITE);
